@@ -1,0 +1,93 @@
+# name: test/sql/parse.test
+# description: parse_address MAP scalar + component extractors
+# group: [vgi_libpostal]
+
+require-env VGI_LIBPOSTAL_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'postal' AS postal (TYPE vgi, LOCATION '${VGI_LIBPOSTAL_WORKER}');
+
+# ---- parse_address(text) -> MAP(VARCHAR, VARCHAR) ----
+# libpostal LOWER-CASES its output; assert against lower case.
+
+query I
+SELECT postal.parse_address('781 Franklin Ave Crown Heights Brooklyn NY 11216')['postcode'];
+----
+11216
+
+query I
+SELECT postal.parse_address('781 Franklin Ave Crown Heights Brooklyn NY 11216')['state'];
+----
+ny
+
+query I
+SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')['city'];
+----
+washington
+
+query I
+SELECT postal.parse_address('10 Downing St, London SW1A 2AA, United Kingdom')['country'];
+----
+united kingdom
+
+# Empty string -> empty map (no keys), NOT an error.
+query I
+SELECT len(map_keys(postal.parse_address('')));
+----
+0
+
+# NULL input -> NULL map.
+query I
+SELECT postal.parse_address(NULL) IS NULL;
+----
+true
+
+# ---- component extractors -> VARCHAR (NULL if absent) ----
+
+query I
+SELECT postal.address_postcode('781 Franklin Ave, Brooklyn, NY 11216');
+----
+11216
+
+query I
+SELECT postal.address_state('781 Franklin Ave, Brooklyn, NY 11216');
+----
+ny
+
+query I
+SELECT postal.address_house_number('1600 Pennsylvania Ave NW, Washington, DC 20500');
+----
+1600
+
+query I
+SELECT postal.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500');
+----
+washington
+
+query I
+SELECT postal.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128');
+----
+apt 5b
+
+query I
+SELECT postal.address_country('10 Downing St, London SW1A 2AA, United Kingdom');
+----
+united kingdom
+
+# Absent component -> NULL (no country in this US address).
+query I
+SELECT postal.address_country('781 Franklin Ave, Brooklyn, NY 11216') IS NULL;
+----
+true
+
+# NULL input -> NULL.
+query I
+SELECT postal.address_postcode(NULL) IS NULL;
+----
+true
+
+statement ok
+DETACH postal;

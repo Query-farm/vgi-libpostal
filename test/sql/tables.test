@@ -1,0 +1,76 @@
+# name: test/sql/tables.test
+# description: parse_address_components (long format) + address_labels (discovery)
+# group: [vgi_libpostal]
+
+require-env VGI_LIBPOSTAL_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'postal' AS postal (TYPE vgi, LOCATION '${VGI_LIBPOSTAL_WORKER}');
+
+# ---- parse_address_components(text) -> (label, value) ----
+# Long-format: one row per parsed component. libpostal lower-cases.
+
+query I
+SELECT value FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216')
+WHERE label = 'postcode';
+----
+11216
+
+query I
+SELECT value FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216')
+WHERE label = 'state';
+----
+ny
+
+query I
+SELECT value FROM postal.parse_address_components('1600 Pennsylvania Ave NW, Washington, DC 20500')
+WHERE label = 'city';
+----
+washington
+
+# At least four components for a full street address.
+query I
+SELECT count(*) >= 4 FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216');
+----
+true
+
+# Empty input -> no rows.
+query I
+SELECT count(*) FROM postal.parse_address_components('');
+----
+0
+
+# Long format agrees with the parse_address MAP scalar.
+query I
+SELECT (SELECT value FROM postal.parse_address_components('1600 Pennsylvania Ave NW, Washington, DC 20500') WHERE label = 'city')
+     = postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')['city'];
+----
+true
+
+# ---- address_labels() discovery ----
+
+query I
+SELECT count(*) > 0 FROM postal.address_labels();
+----
+true
+
+query I
+SELECT count(*) FROM postal.address_labels() WHERE label IN ('road','city','state','postcode','country');
+----
+5
+
+# Every label parse_address_components emits is a known label.
+query I
+SELECT count(*) = 0 FROM (
+  SELECT DISTINCT label FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216')
+  EXCEPT
+  SELECT label FROM postal.address_labels()
+);
+----
+true
+
+statement ok
+DETACH postal;
