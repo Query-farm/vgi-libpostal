@@ -4,7 +4,9 @@
 
 <p align="center"><em>A <a href="https://query.farm">Query.Farm</a> VGI worker for DuckDB.</em></p>
 
-# vgi-libpostal
+# Parse & Normalize International Addresses in DuckDB
+
+> **vgi-libpostal** · a [Query.Farm](https://query.farm) VGI worker · powered by libpostal
 
 International **address parsing + normalization** in DuckDB SQL, powered by
 [libpostal](https://github.com/openvenues/libpostal) — the statistical
