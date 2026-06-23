@@ -74,6 +74,8 @@ class ParseAddressFunction(ScalarFunction):
     """``parse_address(text)`` -- libpostal components as a MAP(label -> value)."""
 
     class Meta:
+        """Function metadata."""
+
         name = "parse_address"
         description = (
             "Parse an address into a MAP of libpostal components "
@@ -96,6 +98,7 @@ class ParseAddressFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.MapArray, Returns(arrow_type=_MAP_TYPE)]:
+        """Parse each row into a MAP of libpostal components (NULL passes through)."""
         return _map_map(text, addresses.parse_address_pairs)
 
 
@@ -108,6 +111,8 @@ class ExpandAddressFunction(ScalarFunction):
     """``expand_address(text)`` -- normalized expansions as a VARCHAR[] list."""
 
     class Meta:
+        """Function metadata."""
+
         name = "expand_address"
         description = (
             "Normalize an address into a LIST of libpostal expansions "
@@ -129,6 +134,7 @@ class ExpandAddressFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to normalize.")]
     ) -> Annotated[pa.ListArray, Returns(arrow_type=_LIST_TYPE)]:
+        """Normalize each row into a LIST of libpostal expansions (NULL passes through)."""
         return _map_list(text, addresses.expand_address)
 
 
@@ -148,6 +154,8 @@ class AddressHouseNumberFunction(ScalarFunction):
     _LABEL = "house_number"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_house_number"
         description = "The libpostal 'house_number' component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -162,6 +170,7 @@ class AddressHouseNumberFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 
@@ -171,6 +180,8 @@ class AddressRoadFunction(ScalarFunction):
     _LABEL = "road"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_road"
         description = "The libpostal 'road' (street) component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -185,6 +196,7 @@ class AddressRoadFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 
@@ -194,6 +206,8 @@ class AddressUnitFunction(ScalarFunction):
     _LABEL = "unit"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_unit"
         description = "The libpostal 'unit' (apartment/suite) component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -208,6 +222,7 @@ class AddressUnitFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 
@@ -217,6 +232,8 @@ class AddressCityFunction(ScalarFunction):
     _LABEL = "city"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_city"
         description = "The libpostal 'city' component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -231,6 +248,7 @@ class AddressCityFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 
@@ -240,6 +258,8 @@ class AddressStateFunction(ScalarFunction):
     _LABEL = "state"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_state"
         description = "The libpostal 'state' (province/region) component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -254,6 +274,7 @@ class AddressStateFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 
@@ -263,6 +284,8 @@ class AddressPostcodeFunction(ScalarFunction):
     _LABEL = "postcode"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_postcode"
         description = "The libpostal 'postcode' (ZIP) component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -277,6 +300,7 @@ class AddressPostcodeFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 
@@ -286,6 +310,8 @@ class AddressCountryFunction(ScalarFunction):
     _LABEL = "country"
 
     class Meta:
+        """Function metadata."""
+
         name = "address_country"
         description = "The libpostal 'country' component of an address, or NULL if absent"
         categories = ["libpostal", "extract"]
@@ -300,6 +326,7 @@ class AddressCountryFunction(ScalarFunction):
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Extract this function's libpostal component for each row (NULL passes through)."""
         return _map_str(text, lambda x: addresses.address_component(x, cls._LABEL))
 
 

@@ -64,6 +64,8 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
     FIXED_SCHEMA: ClassVar[pa.Schema] = _PARSE_COMPONENTS_SCHEMA
 
     class Meta:
+        """Function metadata."""
+
         name = "parse_address_components"
         description = "Parse an address into one (label, value) row per libpostal component"
         categories = ["libpostal", "parse"]
@@ -83,10 +85,12 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
 
     @classmethod
     def cardinality(cls, params: BindParams[_ParseComponentsArgs]) -> TableCardinality:
+        """Estimate the row count (one row per parsed component)."""
         return TableCardinality(estimate=8, max=len(addresses.COMPONENT_LABELS))
 
     @classmethod
     def process(cls, params: ProcessParams[_ParseComponentsArgs], state: None, out: OutputCollector) -> None:
+        """Emit one ``(label, value)`` row per parsed libpostal component."""
         pairs = addresses.parse_address_pairs(params.args.text)
         out.emit(
             pa.RecordBatch.from_pydict(
@@ -122,6 +126,8 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
     FIXED_SCHEMA: ClassVar[pa.Schema] = _ADDRESS_LABELS_SCHEMA
 
     class Meta:
+        """Function metadata."""
+
         name = "address_labels"
         description = "Every component label libpostal's parser can emit (road, city, postcode, ...)"
         categories = ["libpostal", "discovery"]
@@ -138,11 +144,13 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
 
     @classmethod
     def cardinality(cls, params: BindParams[_NoArgs]) -> TableCardinality:
+        """Return the exact row count (one per component label)."""
         n = len(addresses.COMPONENT_LABELS)
         return TableCardinality(estimate=n, max=n)
 
     @classmethod
     def process(cls, params: ProcessParams[_NoArgs], state: None, out: OutputCollector) -> None:
+        """Emit one row per component label libpostal can emit."""
         out.emit(
             pa.RecordBatch.from_pydict(
                 {"label": list(addresses.COMPONENT_LABELS)},
