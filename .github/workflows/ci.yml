@@ -57,13 +57,6 @@ jobs:
       - name: Install project + lint tools (no native libpostal)
         run: uv sync --frozen --extra dev --no-install-package postal
 
-      # pydoclint depends on `docstring-parser-fork`, which installs into the same
-      # `docstring_parser` namespace as the regular `docstring-parser` (a vgi
-      # transitive dep). Whichever lands last wins; force the fork last so
-      # pydoclint's required `docstring_parser.common.DocstringYields` is present.
-      - name: Ensure pydoclint's docstring-parser fork wins
-        run: uv pip install --force-reinstall --no-deps docstring-parser-fork
-
       - name: Check formatting
         run: uv run --no-sync ruff format --check .
 
@@ -74,7 +67,7 @@ jobs:
         run: uv run --no-sync mypy vgi_libpostal/ libpostal_worker.py
 
       - name: Docstring lint (pydoclint)
-        run: uv run --no-sync pydoclint vgi_libpostal/ libpostal_worker.py
+        run: uvx pydoclint --config pyproject.toml vgi_libpostal/ libpostal_worker.py
 
   # Resolve the latest published haybarn release once (only used by the gated
   # integration job, but cheap and keeps the version un-pinned).
