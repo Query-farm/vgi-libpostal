@@ -1,3 +1,20 @@
+# Copyright 2026 Query Farm LLC - https://query.farm
+#
+# IMPORTANT — native dependency.
+# This worker needs the libpostal C library + ~2 GB of ML data models. libpostal
+# is NOT pip-installable and NOT bundled; the `postal` (pypostal) binding is a C
+# extension compiled against it. Building libpostal from source AND downloading
+# its data on a CI runner takes several minutes and ~2 GB of disk on every run.
+#
+# So the jobs are split into tiers:
+#   * lint — pure-Python, needs NO libpostal. Always runs, always meaningful.
+#   * test / integration — need libpostal compiled + data downloaded; both build
+#     it from source first. These are the authoritative behaviour gates but are
+#     heavy, so they're gated behind the `RUN_LIBPOSTAL` repo variable.
+#
+# The SQL end-to-end runs through the real signed `vgi` DuckDB community
+# extension via a prebuilt standalone `haybarn-unittest` (see ci/README.md) — no
+# C++ build of the *extension*; only the libpostal native lib is built here.
 name: CI
 
 on:
@@ -12,24 +29,13 @@ on:
 permissions:
   contents: read
 
-# IMPORTANT — native dependency.
-# This worker needs the libpostal C library + ~2 GB of ML data models. libpostal
-# is NOT pip-installable and NOT bundled; the `postal` (pypostal) binding is a C
-# extension compiled against it. Building libpostal from source AND downloading
-# its data on a CI runner takes several minutes and ~2 GB of disk on every run.
-#
-# So the jobs are split into two tiers:
-#   * lint — pure-Python, needs NO libpostal. Always runs, always meaningful.
-#   * test / e2e — need libpostal compiled + data downloaded; both build it from
-#     source first. These are the authoritative behaviour gates but are heavy.
-# The `postal` dependency is only installable once libpostal is present, so the
-# heavy jobs export CFLAGS/LDFLAGS pointing at the build before `uv sync`.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ---------------------------------------------------------------------------
   # Pure-Python lint: no libpostal needed, so it's fast and always green.
-  # We install only the dev tooling (ruff, mypy) and skip the `postal` build by
-  # type-checking against the source tree without importing the C extension.
   # ---------------------------------------------------------------------------
   lint:
     name: Lint (pure-Python, no libpostal)
@@ -43,9 +49,6 @@ jobs:
       - name: Set up Python 3.13
         run: uv python install 3.13
 
-      # Lint/format/type-check need the dev tools but NOT a working libpostal at
-      # runtime. mypy runs with ignore_missing_imports = true (see pyproject), so
-      # the un-built `postal` import is tolerated. We install just the tools.
       - name: Install lint tools
         run: uv tool install ruff && uv tool install mypy
 
@@ -58,21 +61,39 @@ jobs:
       - name: Type check (mypy)
         run: uvx mypy vgi_libpostal/ || true  # tolerant: type-only, libpostal absent
 
+  # Resolve the latest published haybarn release once (only used by the gated
+  # integration job, but cheap and keeps the version un-pinned).
+  resolve-haybarn:
+    name: Resolve haybarn release
+    runs-on: ubuntu-latest
+    if: ${{ vars.RUN_LIBPOSTAL == 'true' }}
+    outputs:
+      release: ${{ steps.r.outputs.release }}
+    steps:
+      - id: r
+        run: |
+          REL=$(gh release view --repo Query-farm-haybarn/haybarn --json tagName --jq .tagName)
+          echo "release=$REL" >> "$GITHUB_OUTPUT"
+          echo "Latest haybarn release: $REL"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   # ---------------------------------------------------------------------------
-  # Build libpostal once, then reuse it for both pytest and the SQL E2E.
-  # This is the HEAVY, SLOW path: ~minutes to compile + ~2 GB data download.
-  # It is required-but-gated behind `if:` so a fork without the build cache, or a
-  # docs-only change, doesn't pay the cost. Flip `RUN_LIBPOSTAL` to 'true' (repo
-  # variable) to enable on a runner that can afford it.
+  # Build libpostal once, then run pytest AND the SQL E2E (standalone haybarn).
+  # HEAVY/SLOW: ~minutes to compile + ~2 GB data download — gated behind the
+  # `RUN_LIBPOSTAL` repo variable (default off to keep PRs fast). Flip it to
+  # 'true' on a runner that can afford the build.
   # ---------------------------------------------------------------------------
-  e2e:
+  integration:
     name: Tests + E2E SQL (builds libpostal — heavy/slow, ~2 GB)
     runs-on: ubuntu-latest
-    # Gate: only run where the maintainer has opted in (default off to keep PRs
-    # fast). The libpostal build + data download is the documented reason.
+    needs: resolve-haybarn
     if: ${{ vars.RUN_LIBPOSTAL == 'true' }}
     env:
       LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v6
 
@@ -98,22 +119,41 @@ jobs:
           sudo ldconfig
 
       # pypostal compiles against the libpostal we just built.
-      - name: Install dependencies (compiles pypostal against libpostal)
+      - name: Install the worker (compiles pypostal against libpostal)
         env:
           CFLAGS: -I${{ github.workspace }}/.libpostal/include
           LDFLAGS: -L${{ github.workspace }}/.libpostal/lib
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
-        run: uv sync --extra dev
+        run: uv sync --frozen --extra dev
 
       - name: Run unit / integration tests
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
         run: uv run --no-sync pytest -q
 
-      - name: Install haybarn-unittest
-        run: uv tool install haybarn-unittest
+      - name: Download haybarn-unittest
+        run: |
+          gh release download "$HAYBARN_RELEASE" \
+            --repo Query-farm-haybarn/haybarn \
+            --pattern 'haybarn_unittest-linux-amd64.zip' \
+            --output haybarn-unittest.zip --clobber
+          mkdir -p hb && unzip -o -q haybarn-unittest.zip -d hb
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HAYBARN_RELEASE: ${{ needs.resolve-haybarn.outputs.release }}
 
-      - name: Run end-to-end SQL tests
+      - name: Resolve runner + worker paths
+        run: |
+          # Absolute paths: run-integration.sh cd's into a staging dir before
+          # invoking the runner. The worker runs from the compiled .venv via plain
+          # `.venv/bin/python` (no uv re-resolve / no pypostal rebuild per ATTACH),
+          # with LD_LIBRARY_PATH pointing at the libpostal we built.
+          UNITTEST="$PWD/$(find hb -name 'haybarn-unittest' -type f | head -1)"
+          chmod +x "$UNITTEST"
+          echo "HAYBARN_UNITTEST=$UNITTEST" >> "$GITHUB_ENV"
+          echo "VGI_LIBPOSTAL_WORKER=$PWD/.venv/bin/python $PWD/libpostal_worker.py" >> "$GITHUB_ENV"
+
+      - name: Run extension integration suite
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
-        run: make test-sql
+        run: ci/run-integration.sh
