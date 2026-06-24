@@ -84,7 +84,35 @@ _SCHEMA_DESCRIPTION_LLM = (
     "and discover the set of component labels libpostal can emit."
 )
 
-_SCHEMA_DESCRIPTION_MD = "libpostal address parsing, component extraction, and normalization functions."
+_SCHEMA_DESCRIPTION_MD = (
+    "Address parsing, component extraction, and normalization functions backed by "
+    "libpostal.\n\n"
+    "Scalars: `parse_address` (MAP), `expand_address` (LIST), and the `address_*` "
+    "component extractors. Table functions: `parse_address_components` (long "
+    "format) and `address_labels` (discovery). Output is lower-cased."
+)
+
+# VGI506: representative, catalog-qualified example queries for the schema.
+_SCHEMA_EXAMPLE_QUERIES = (
+    "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500');\n"
+    "SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode'];\n"
+    "SELECT UNNEST(postal.main.expand_address('120 E 96th St'));\n"
+    "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216');\n"
+    "SELECT * FROM postal.main.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216');\n"
+    "SELECT label FROM postal.main.address_labels() ORDER BY label;"
+)
+
+_CATALOG_KEYWORDS = (
+    "libpostal, address, address parsing, parse address, geocoding, "
+    "normalization, standardization, postal, postcode, zip, record linkage, "
+    "deduplication, international addresses, openstreetmap"
+)
+
+_SCHEMA_KEYWORDS = (
+    "libpostal, address, parse, parse_address, expand_address, components, "
+    "house_number, road, city, state, postcode, country, unit, labels, "
+    "normalization, geocoding"
+)
 
 _POSTAL_CATALOG = Catalog(
     name="postal",
@@ -92,8 +120,10 @@ _POSTAL_CATALOG = Catalog(
     comment="Parse + normalize international postal addresses (libpostal) for SQL",
     source_url="https://github.com/Query-farm/vgi-libpostal",
     tags={
-        "vgi.description_llm": _CATALOG_DESCRIPTION_LLM,
-        "vgi.description_md": _CATALOG_DESCRIPTION_MD,
+        "vgi.title": "International Address Parsing (libpostal)",
+        "vgi.keywords": _CATALOG_KEYWORDS,
+        "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
+        "vgi.doc_md": _CATALOG_DESCRIPTION_MD,
         "vgi.author": "Query.Farm",
         "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
         "vgi.license": "MIT",
@@ -105,8 +135,17 @@ _POSTAL_CATALOG = Catalog(
             name="main",
             comment="libpostal address parsing, component extraction, and normalization functions",
             tags={
-                "vgi.description_llm": _SCHEMA_DESCRIPTION_LLM,
-                "vgi.description_md": _SCHEMA_DESCRIPTION_MD,
+                "vgi.title": "Address Parsing & Normalization",
+                "vgi.keywords": _SCHEMA_KEYWORDS,
+                "vgi.source_url": "https://github.com/Query-farm/vgi-libpostal/blob/main/vgi_libpostal",
+                "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
+                "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
+                # VGI123 classifying tags -- BARE keys (not vgi.-namespaced).
+                "domain": "geospatial",
+                "category": "parsing",
+                "topic": "address-normalization",
+                # VGI506: representative example queries for the schema.
+                "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
             },
             functions=list(_FUNCTIONS),
         ),

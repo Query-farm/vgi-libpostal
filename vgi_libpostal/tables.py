@@ -34,7 +34,36 @@ from vgi.table_function import (
 from vgi_rpc.rpc import OutputCollector
 
 from . import addresses
+from .meta import object_tags
 from .schema_utils import field
+
+_TABLES_SRC = "vgi_libpostal/tables.py"
+
+# VGI509: guaranteed-runnable, catalog-qualified executable examples. Each `sql`
+# is self-contained and re-runnable against an attached `postal` worker. We omit
+# `expected_result` deliberately -- the linter only needs each query to execute
+# cleanly, and libpostal output is statistical/lower-cased, so pinning exact
+# values would be brittle.
+_EXECUTABLE_EXAMPLES = (
+    "["
+    '{"description": "Parse a US address into a component MAP.",'
+    ' "sql": "SELECT postal.main.parse_address('
+    "'1600 Pennsylvania Ave NW, Washington, DC 20500')\"},"
+    '{"description": "Pull one component out of the parsed map.",'
+    ' "sql": "SELECT postal.main.parse_address('
+    "'10 Downing St, London SW1A 2AA, UK')['postcode']\"},"
+    '{"description": "Normalize/expand an abbreviated address for matching.",'
+    ' "sql": "SELECT postal.main.expand_address(\'120 E 96th St\')"},'
+    '{"description": "Extract just the postcode from an address.",'
+    ' "sql": "SELECT postal.main.address_postcode('
+    "'781 Franklin Ave, Brooklyn, NY 11216')\"},"
+    '{"description": "Long-format parse: one (label, value) row per component.",'
+    ' "sql": "SELECT * FROM postal.main.parse_address_components('
+    "'781 Franklin Ave, Brooklyn, NY 11216')\"},"
+    '{"description": "List the component labels libpostal can emit.",'
+    ' "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label"}'
+    "]"
+)
 
 
 @dataclass(kw_only=True)
@@ -70,13 +99,53 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
         description = "Parse an address into one (label, value) row per libpostal component"
         categories = ["libpostal", "parse"]
         tags = {
-            "vgi.columns_md": (
+            **object_tags(
+                title="Parse Address Components Long Format",
+                doc_llm=(
+                    "## parse_address_components\n\n"
+                    "Table function: parse a single address string and emit one "
+                    "`(label, value)` **row per libpostal component**, in "
+                    "libpostal's order. This is the long-format complement to the "
+                    "`parse_address` MAP scalar.\n\n"
+                    "**Use it when** you want to filter, join, or aggregate over "
+                    "address components in set-based SQL (e.g. "
+                    "`... WHERE label = 'city'`) rather than indexing a map.\n\n"
+                    "**Argument:** `text` (`VARCHAR`) -- the address to parse. "
+                    "**Returns:** rows of `(label VARCHAR, value VARCHAR)`.\n\n"
+                    "**Behaviors / edge cases:** values are lower-cased; labels "
+                    "are statistical and best-effort (see `address_labels()` for "
+                    "the full set). An empty / whitespace input yields **no rows** "
+                    "(not an error)."
+                ),
+                doc_md=(
+                    "# parse_address_components\n\n"
+                    "Parse an address into one `(label, value)` row per libpostal "
+                    "component -- the long-format complement to the "
+                    "`parse_address` MAP scalar.\n\n"
+                    "## Usage\n\n"
+                    "```sql\n"
+                    "SELECT * FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216');\n"
+                    "SELECT value FROM postal.parse_address_components(\n"
+                    "  '1600 Pennsylvania Ave NW, Washington, DC 20500') WHERE label = 'city';\n"
+                    "```\n\n"
+                    "## Notes\n\n"
+                    "Values are lower-cased; empty/whitespace input yields no "
+                    "rows. See `address_labels()` for the full label set."
+                ),
+                keywords=(
+                    "parse address, components, long format, label value, unpivot, "
+                    "libpostal, table function, road, city, state, postcode"
+                ),
+                relative_path=_TABLES_SRC,
+            ),
+            "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
                 "| `label` | VARCHAR | libpostal component label (`road`, `city`, "
                 "`state`, `postcode`, `country`, `house_number`, `unit`, ...). |\n"
                 "| `value` | VARCHAR | The (lower-cased) component value. |"
             ),
+            "vgi.executable_examples": _EXECUTABLE_EXAMPLES,
         }
         examples = [
             FunctionExample(
@@ -141,7 +210,42 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
         description = "Every component label libpostal's parser can emit (road, city, postcode, ...)"
         categories = ["libpostal", "discovery"]
         tags = {
-            "vgi.columns_md": (
+            **object_tags(
+                title="List Address Component Labels",
+                doc_llm=(
+                    "## address_labels\n\n"
+                    "Discovery table function: emit **every component label "
+                    "libpostal's parser can produce**, one per row (no "
+                    "arguments).\n\n"
+                    "**Use it when** you need to know which keys you can read out "
+                    "of `parse_address(...)` or filter on in "
+                    "`parse_address_components(...)` -- e.g. to build a UI, "
+                    "validate a label, or pivot components into columns.\n\n"
+                    "**Arguments:** none. **Returns:** rows of `(label VARCHAR)`. "
+                    "The set is fixed (libpostal's label vocabulary) and "
+                    "deterministic."
+                ),
+                doc_md=(
+                    "# address_labels\n\n"
+                    "List every component label libpostal can emit -- the "
+                    "vocabulary of keys for `parse_address` / "
+                    "`parse_address_components`.\n\n"
+                    "## Usage\n\n"
+                    "```sql\n"
+                    "SELECT count(*) FROM postal.address_labels();\n"
+                    "SELECT label FROM postal.address_labels() ORDER BY label;\n"
+                    "```\n\n"
+                    "## Notes\n\n"
+                    "Takes no arguments; the returned label set is fixed and "
+                    "deterministic."
+                ),
+                keywords=(
+                    "labels, component labels, discovery, schema, vocabulary, "
+                    "fields, keys, libpostal, table function, metadata"
+                ),
+                relative_path=_TABLES_SRC,
+            ),
+            "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
                 "| `label` | VARCHAR | A component label libpostal can emit "
