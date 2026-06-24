@@ -93,10 +93,21 @@ jobs:
   # 'true' on a runner that can afford the build.
   # ---------------------------------------------------------------------------
   integration:
-    name: Tests + E2E SQL (builds libpostal — heavy/slow, ~2 GB)
+    name: Tests + E2E SQL (${{ matrix.transport }}; builds libpostal — heavy/slow, ~2 GB)
     runs-on: ubuntu-latest
     needs: resolve-haybarn
+    # HEAVY/SLOW (libpostal build + ~2 GB data); gated behind the RUN_LIBPOSTAL
+    # repo variable (default OFF — this job stays SKIPPED on normal PRs). When
+    # flipped on, the SAME SQL suite runs over every VGI transport: the vgi
+    # extension picks the transport from the ATTACH LOCATION run-integration.sh
+    # builds per $TRANSPORT (subprocess stdio / http://127.0.0.1:<port> booted
+    # with --http / unix:///tmp/libpostal.sock booted with --unix). Ubuntu-only
+    # because the libpostal native build in this job is Linux-specific.
     if: ${{ vars.RUN_LIBPOSTAL == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        transport: [subprocess, http, unix]
     env:
       LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
     defaults:
@@ -126,13 +137,15 @@ jobs:
           echo "$LIBPOSTAL_PREFIX/lib" | sudo tee /etc/ld.so.conf.d/libpostal.conf
           sudo ldconfig
 
-      # pypostal compiles against the libpostal we just built.
+      # pypostal compiles against the libpostal we just built. The `http` extra
+      # pulls in waitress so the worker can serve `--http`; harmless for the
+      # subprocess/unix legs, required for the http leg.
       - name: Install the worker (compiles pypostal against libpostal)
         env:
           CFLAGS: -I${{ github.workspace }}/.libpostal/include
           LDFLAGS: -L${{ github.workspace }}/.libpostal/lib
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
-        run: uv sync --frozen --extra dev
+        run: uv sync --frozen --extra dev --extra http
 
       - name: Run unit / integration tests
         env:
@@ -159,9 +172,10 @@ jobs:
           UNITTEST="$PWD/$(find hb -name 'haybarn-unittest' -type f | head -1)"
           chmod +x "$UNITTEST"
           echo "HAYBARN_UNITTEST=$UNITTEST" >> "$GITHUB_ENV"
-          echo "VGI_LIBPOSTAL_WORKER=$PWD/.venv/bin/python $PWD/libpostal_worker.py" >> "$GITHUB_ENV"
+          echo "WORKER_CMD=$PWD/.venv/bin/python $PWD/libpostal_worker.py" >> "$GITHUB_ENV"
 
-      - name: Run extension integration suite
+      - name: Run extension integration suite (${{ matrix.transport }})
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
+          TRANSPORT: ${{ matrix.transport }}
         run: ci/run-integration.sh
