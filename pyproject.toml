@@ -41,6 +41,13 @@ dev = [
     "mypy>=1.10",
     "pydoclint>=0.5",
 ]
+# HTTP transport: the worker can serve over HTTP (`libpostal_worker.py --http`)
+# in addition to stdio/AF_UNIX. That path needs vgi-python's `http` extra
+# (waitress). The gated SQL-E2E http transport leg installs this via
+# `uv sync --extra http` (alongside the libpostal native build).
+http = [
+    "vgi-python[http]>=0.8.3",
+]
 
 [build-system]
 requires = ["hatchling"]
