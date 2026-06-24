@@ -179,3 +179,59 @@ jobs:
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
           TRANSPORT: ${{ matrix.transport }}
         run: ci/run-integration.sh
+
+  # ---------------------------------------------------------------------------
+  # Metadata-quality gate: run vgi-lint (--fail-on info) against the catalog
+  # metadata (catalog/schema descriptions + tags, per-function examples, table
+  # columns_md). Launching the worker to introspect its catalog needs the
+  # libpostal native lib + ~2 GB data (same as `integration`), so it mirrors that
+  # build and is gated behind the same `RUN_LIBPOSTAL` repo variable. Kept as a
+  # SEPARATE, visible job so the metadata-quality result stands on its own.
+  # ---------------------------------------------------------------------------
+  metadata-quality:
+    name: Metadata quality (vgi-lint; builds libpostal — heavy/slow, ~2 GB)
+    runs-on: ubuntu-latest
+    if: ${{ vars.RUN_LIBPOSTAL == 'true' }}
+    env:
+      LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      # ~~~ Build libpostal from source (several minutes) ~~~
+      - name: Install libpostal build deps
+        run: sudo apt-get update && sudo apt-get install -y curl autoconf automake libtool pkg-config
+
+      - name: Build + install libpostal (+ download ~2 GB data)
+        run: |
+          git clone https://github.com/openvenues/libpostal "$RUNNER_TEMP/libpostal"
+          cd "$RUNNER_TEMP/libpostal"
+          ./bootstrap.sh
+          ./configure --prefix="$LIBPOSTAL_PREFIX" --datadir="$LIBPOSTAL_PREFIX/data"
+          make -j"$(nproc)"
+          make install
+          echo "$LIBPOSTAL_PREFIX/lib" | sudo tee /etc/ld.so.conf.d/libpostal.conf
+          sudo ldconfig
+
+      - name: Install the worker (compiles pypostal against libpostal)
+        env:
+          CFLAGS: -I${{ github.workspace }}/.libpostal/include
+          LDFLAGS: -L${{ github.workspace }}/.libpostal/lib
+          LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
+        run: uv sync --frozen --extra dev --extra http
+
+      - name: vgi-lint
+        uses: Query-farm/vgi-lint-check@v1
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
+        with:
+          location: "${{ github.workspace }}/.venv/bin/python ${{ github.workspace }}/libpostal_worker.py"
+          fail-on: info

@@ -69,6 +69,15 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
         name = "parse_address_components"
         description = "Parse an address into one (label, value) row per libpostal component"
         categories = ["libpostal", "parse"]
+        tags = {
+            "vgi.columns_md": (
+                "| column | type | description |\n"
+                "|---|---|---|\n"
+                "| `label` | VARCHAR | libpostal component label (`road`, `city`, "
+                "`state`, `postcode`, `country`, `house_number`, `unit`, ...). |\n"
+                "| `value` | VARCHAR | The (lower-cased) component value. |"
+            ),
+        }
         examples = [
             FunctionExample(
                 sql="SELECT * FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216')",
@@ -131,6 +140,15 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
         name = "address_labels"
         description = "Every component label libpostal's parser can emit (road, city, postcode, ...)"
         categories = ["libpostal", "discovery"]
+        tags = {
+            "vgi.columns_md": (
+                "| column | type | description |\n"
+                "|---|---|---|\n"
+                "| `label` | VARCHAR | A component label libpostal can emit "
+                "(`road`, `city`, `state`, `postcode`, `country`, `house_number`, "
+                "`unit`, ...). |"
+            ),
+        }
         examples = [
             FunctionExample(
                 sql="SELECT count(*) FROM postal.address_labels()",

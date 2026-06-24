@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.8.3",
+#     "vgi-python[http]>=0.8.4",
 #     "postal>=1.1",
 # ]
 # ///
@@ -53,13 +53,61 @@ _FUNCTIONS: list[type] = [
     *TABLE_FUNCTIONS,
 ]
 
+_CATALOG_DESCRIPTION_LLM = (
+    "Parse and normalize free-form international postal addresses with libpostal "
+    "(an OSM-trained statistical address parser). Break an address string into its "
+    "components (house_number, road, unit, city, state, postcode, country, ...), "
+    "extract a single component (city, state, postcode, country, road, unit, "
+    "house_number), or normalize/expand abbreviations ('St' -> 'street', 'E' -> "
+    "'east') for matching and deduplication. Use for address parsing, geocoding "
+    "pre-processing, address standardization, and record linkage in SQL. Output is "
+    "lower-cased; an empty string yields an empty result, NULL yields NULL."
+)
+
+_CATALOG_DESCRIPTION_MD = (
+    "# postal\n\n"
+    "International address parsing and normalization powered by "
+    "[libpostal](https://github.com/openvenues/libpostal).\n\n"
+    "**Scalars:** `parse_address` (MAP), `expand_address` (LIST), and the "
+    "`address_*` component extractors (`address_house_number`, `address_road`, "
+    "`address_unit`, `address_city`, `address_state`, `address_postcode`, "
+    "`address_country`).\n\n"
+    "**Table functions:** `parse_address_components` (long-format parse) and "
+    "`address_labels` (discovery).\n\n"
+    "Output is lower-cased; empty string -> empty result, NULL -> NULL."
+)
+
+_SCHEMA_DESCRIPTION_LLM = (
+    "libpostal address parsing and normalization functions: parse an address into "
+    "a MAP or long-format rows of components, extract a single component (city, "
+    "state, postcode, country, road, unit, house_number), expand abbreviations, "
+    "and discover the set of component labels libpostal can emit."
+)
+
+_SCHEMA_DESCRIPTION_MD = "libpostal address parsing, component extraction, and normalization functions."
+
 _POSTAL_CATALOG = Catalog(
     name="postal",
     default_schema="main",
+    comment="Parse + normalize international postal addresses (libpostal) for SQL",
+    source_url="https://github.com/Query-farm/vgi-libpostal",
+    tags={
+        "vgi.description_llm": _CATALOG_DESCRIPTION_LLM,
+        "vgi.description_md": _CATALOG_DESCRIPTION_MD,
+        "vgi.author": "Query.Farm",
+        "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
+        "vgi.license": "MIT",
+        "vgi.support_contact": "https://github.com/Query-farm/vgi-libpostal/issues",
+        "vgi.support_policy_url": "https://github.com/Query-farm/vgi-libpostal/blob/main/README.md",
+    },
     schemas=[
         Schema(
             name="main",
-            comment="Parse + normalize international postal addresses (libpostal) for SQL",
+            comment="libpostal address parsing, component extraction, and normalization functions",
+            tags={
+                "vgi.description_llm": _SCHEMA_DESCRIPTION_LLM,
+                "vgi.description_md": _SCHEMA_DESCRIPTION_MD,
+            },
             functions=list(_FUNCTIONS),
         ),
     ],
