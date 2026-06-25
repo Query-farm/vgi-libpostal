@@ -10,30 +10,31 @@ human-written content:
 - ``vgi.doc_llm`` (VGI112)      -- a Markdown narrative aimed at an LLM/agent.
 - ``vgi.doc_md`` (VGI113)       -- a Markdown narrative aimed at human docs
   (distinct content from ``vgi.doc_llm``).
-- ``vgi.keywords`` (VGI126)     -- comma-separated search terms / synonyms.
-- ``vgi.source_url`` (VGI128)   -- link to the implementing source file.
+- ``vgi.keywords`` (VGI126)     -- a JSON array of search terms / synonyms.
 
-``source_url(path)`` builds the canonical GitHub blob URL for a source file so
-every object points at exactly where it is implemented.
+``vgi.source_url`` is intentionally **not** set per object (VGI139): the
+implementation link belongs only on the catalog object, so per-function /
+per-schema ``source_url`` tags would be redundant and are dropped.
 """
 
 from __future__ import annotations
 
-#: Base GitHub blob URL for source files in this repo (pinned to ``main``).
-SOURCE_BASE = "https://github.com/Query-farm/vgi-libpostal/blob/main"
+import json
 
 
-def source_url(relative_path: str) -> str:
-    """Build the implementation ``vgi.source_url`` for a repo-relative file.
+def keywords_json(keywords: list[str]) -> str:
+    """Serialize keywords as a JSON array string for the ``vgi.keywords`` tag.
+
+    VGI138 requires ``vgi.keywords`` to be a JSON array of strings (e.g.
+    ``["a","b"]``), not a comma-separated string.
 
     Args:
-        relative_path: Path to the implementing file relative to the repo root,
-            e.g. ``"vgi_libpostal/scalars.py"``.
+        keywords: The individual search terms / synonyms for the object.
 
     Returns:
-        The canonical GitHub blob URL (pinned to ``main``) for that file.
+        A JSON array string suitable for the ``vgi.keywords`` tag value.
     """
-    return f"{SOURCE_BASE}/{relative_path}"
+    return json.dumps(keywords)
 
 
 def object_tags(
@@ -41,10 +42,10 @@ def object_tags(
     title: str,
     doc_llm: str,
     doc_md: str,
-    keywords: str,
+    keywords: list[str],
     relative_path: str,
 ) -> dict[str, str]:
-    """Build the five standard per-object discovery/description tags.
+    """Build the standard per-object discovery/description tags.
 
     Args:
         title: Human-friendly display name (``vgi.title``); must not
@@ -52,17 +53,19 @@ def object_tags(
         doc_llm: Markdown narrative aimed at an LLM/agent (``vgi.doc_llm``).
         doc_md: Markdown narrative aimed at human docs (``vgi.doc_md``);
             distinct content from ``doc_llm``.
-        keywords: Comma-separated search terms / synonyms (``vgi.keywords``).
-        relative_path: Implementing file relative to the repo root, used to
-            build ``vgi.source_url``.
+        keywords: Search terms / synonyms (``vgi.keywords``), serialized as a
+            JSON array of strings (VGI138).
+        relative_path: Retained for call-site documentation of where the object
+            is implemented; no longer emitted as a tag (VGI139 keeps
+            ``source_url`` on the catalog only).
 
     Returns:
-        A dict of the five standard per-object tags.
+        A dict of the standard per-object tags.
     """
+    _ = relative_path  # implementation link lives on the catalog (VGI139)
     return {
         "vgi.title": title,
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
-        "vgi.keywords": keywords,
-        "vgi.source_url": source_url(relative_path),
+        "vgi.keywords": keywords_json(keywords),
     }

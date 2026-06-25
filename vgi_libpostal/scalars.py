@@ -126,11 +126,24 @@ class ParseAddressFunction(ScalarFunction):
                 "- Labels are statistical and may vary across address styles; see "
                 "`address_labels()` for the full label set."
             ),
-            keywords=(
-                "parse address, address parser, libpostal, components, map, "
-                "house number, road, street, city, state, postcode, zip, country, "
-                "geocoding, standardization, record linkage"
-            ),
+            keywords=[
+                "parse address",
+                "address parser",
+                "libpostal",
+                "components",
+                "map",
+                "house number",
+                "road",
+                "street",
+                "city",
+                "state",
+                "postcode",
+                "zip",
+                "country",
+                "geocoding",
+                "standardization",
+                "record linkage",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -206,11 +219,21 @@ class ExpandAddressFunction(ScalarFunction):
                 "and `NULL` yields `NULL`.\n"
                 "- For field extraction (not normalization), use `parse_address`."
             ),
-            keywords=(
-                "expand address, normalize, normalization, abbreviation, "
-                "expansion, libpostal, deduplication, dedupe, record linkage, "
-                "matching, canonical form, street, saint"
-            ),
+            keywords=[
+                "expand address",
+                "normalize",
+                "normalization",
+                "abbreviation",
+                "expansion",
+                "libpostal",
+                "deduplication",
+                "dedupe",
+                "record linkage",
+                "matching",
+                "canonical form",
+                "street",
+                "saint",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -279,7 +302,15 @@ class AddressHouseNumberFunction(ScalarFunction):
                 "Returns `NULL` when no house number is detected and for `NULL` "
                 "input. Shorthand for `parse_address(addr)['house_number']`."
             ),
-            keywords=("house number, street number, building number, address component, libpostal, extract, parse"),
+            keywords=[
+                "house number",
+                "street number",
+                "building number",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -333,7 +364,16 @@ class AddressRoadFunction(ScalarFunction):
                 "Output is lower-cased. Returns `NULL` when no road is detected "
                 "and for `NULL` input. Shorthand for `parse_address(addr)['road']`."
             ),
-            keywords=("road, street, street name, thoroughfare, address component, libpostal, extract, parse"),
+            keywords=[
+                "road",
+                "street",
+                "street name",
+                "thoroughfare",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -388,10 +428,19 @@ class AddressUnitFunction(ScalarFunction):
                 "`NULL` is common -- most addresses have no unit. Returns `NULL` "
                 "for `NULL` input. Shorthand for `parse_address(addr)['unit']`."
             ),
-            keywords=(
-                "unit, apartment, apt, suite, floor, sub-premise, secondary "
-                "address, address component, libpostal, extract, parse"
-            ),
+            keywords=[
+                "unit",
+                "apartment",
+                "apt",
+                "suite",
+                "floor",
+                "sub-premise",
+                "secondary address",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -451,7 +500,17 @@ class AddressCityFunction(ScalarFunction):
                 "neighbourhoods as `suburb` rather than `city`, in which case this "
                 "returns `NULL`. Shorthand for `parse_address(addr)['city']`."
             ),
-            keywords=("city, town, locality, municipality, place, address component, libpostal, extract, parse"),
+            keywords=[
+                "city",
+                "town",
+                "locality",
+                "municipality",
+                "place",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -507,7 +566,16 @@ class AddressStateFunction(ScalarFunction):
                 "state is detected and for `NULL` input. Shorthand for "
                 "`parse_address(addr)['state']`."
             ),
-            keywords=("state, province, region, administrative area, address component, libpostal, extract, parse"),
+            keywords=[
+                "state",
+                "province",
+                "region",
+                "administrative area",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -561,7 +629,17 @@ class AddressPostcodeFunction(ScalarFunction):
                 "Returns `NULL` when no postcode is detected and for `NULL` input. "
                 "Shorthand for `parse_address(addr)['postcode']`."
             ),
-            keywords=("postcode, postal code, zip, zip code, zipcode, address component, libpostal, extract, parse"),
+            keywords=[
+                "postcode",
+                "postal code",
+                "zip",
+                "zip code",
+                "zipcode",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [
@@ -614,7 +692,15 @@ class AddressCountryFunction(ScalarFunction):
                 "Returns `NULL` when the country is absent or implied, and for "
                 "`NULL` input. Shorthand for `parse_address(addr)['country']`."
             ),
-            keywords=("country, nation, address component, libpostal, extract, parse, international"),
+            keywords=[
+                "country",
+                "nation",
+                "address component",
+                "libpostal",
+                "extract",
+                "parse",
+                "international",
+            ],
             relative_path=_SCALARS_SRC,
         )
         examples = [

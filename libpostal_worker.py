@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.8.4",
+#     "vgi-python[http]>=0.8.5",
 #     "postal>=1.1",
 # ]
 # ///
@@ -42,11 +42,13 @@ Usage:
 
 from __future__ import annotations
 
+import json
+
 from vgi import Worker
-from vgi.catalog import Catalog, Schema
+from vgi.catalog import Catalog, Schema, Table
 
 from vgi_libpostal.scalars import SCALAR_FUNCTIONS
-from vgi_libpostal.tables import TABLE_FUNCTIONS
+from vgi_libpostal.tables import TABLE_FUNCTIONS, AddressLabelsFunction
 
 _FUNCTIONS: list[type] = [
     *SCALAR_FUNCTIONS,
@@ -102,17 +104,121 @@ _SCHEMA_EXAMPLE_QUERIES = (
     "SELECT label FROM postal.main.address_labels() ORDER BY label;"
 )
 
-_CATALOG_KEYWORDS = (
-    "libpostal, address, address parsing, parse address, geocoding, "
-    "normalization, standardization, postal, postcode, zip, record linkage, "
-    "deduplication, international addresses, openstreetmap"
+# VGI138: vgi.keywords must be a JSON array of strings, not a comma-separated
+# string. ``json.dumps`` on these lists yields the required ``["a","b",...]``.
+_CATALOG_KEYWORDS = json.dumps(
+    [
+        "libpostal",
+        "address",
+        "address parsing",
+        "parse address",
+        "geocoding",
+        "normalization",
+        "standardization",
+        "postal",
+        "postcode",
+        "zip",
+        "record linkage",
+        "deduplication",
+        "international addresses",
+        "openstreetmap",
+    ]
 )
 
-_SCHEMA_KEYWORDS = (
-    "libpostal, address, parse, parse_address, expand_address, components, "
-    "house_number, road, city, state, postcode, country, unit, labels, "
-    "normalization, geocoding"
+_SCHEMA_KEYWORDS = json.dumps(
+    [
+        "libpostal",
+        "address",
+        "parse",
+        "parse_address",
+        "expand_address",
+        "components",
+        "house_number",
+        "road",
+        "city",
+        "state",
+        "postcode",
+        "country",
+        "unit",
+        "labels",
+        "normalization",
+        "geocoding",
+    ]
 )
+
+# VGI311: `address_labels` is a parameterless table function -- it always returns
+# the same fixed rows -- so it is ALSO exposed as a regular table that scans that
+# function. This lets consumers write `SELECT * FROM postal.main.address_labels`
+# (no parentheses), the natural shape for a static discovery set.
+_ADDRESS_LABELS_TABLE_DOC_LLM = (
+    "## address_labels (table)\n\n"
+    "Discovery table listing **every component label libpostal's parser can "
+    "emit**, one per row. It is the table form of the `address_labels()` table "
+    "function, exposed without parentheses so you can `SELECT * FROM "
+    "postal.main.address_labels`.\n\n"
+    "**Use it when** you need the vocabulary of keys readable out of "
+    "`parse_address(...)` or filterable in `parse_address_components(...)` -- "
+    "for building a UI, validating a label, or pivoting components into "
+    "columns. The set is fixed and deterministic."
+)
+_ADDRESS_LABELS_TABLE_DOC_MD = (
+    "# address_labels\n\n"
+    "Discovery table of every component label libpostal can emit, exposed as a "
+    "regular table so you can `SELECT * FROM postal.main.address_labels` without "
+    "parentheses.\n\n"
+    "## Columns\n\n"
+    "- `label` (VARCHAR, primary key) -- a component label libpostal can emit "
+    "(`road`, `city`, `state`, `postcode`, `country`, `house_number`, `unit`, "
+    "...).\n\n"
+    "## Usage\n\n"
+    "```sql\n"
+    "SELECT * FROM postal.main.address_labels ORDER BY label;\n"
+    "```"
+)
+
+_DISCOVERY_TABLES: list[Table] = [
+    Table(
+        name="address_labels",
+        function=AddressLabelsFunction,
+        comment="Every component label libpostal can emit, one per row (discovery table).",
+        primary_key=(("label",),),
+        not_null=("label",),
+        column_comments={
+            "label": "A component label libpostal can emit, e.g. road, city, state, postcode, country.",
+        },
+        tags={
+            "vgi.title": "Address Component Labels Table",
+            "vgi.doc_llm": _ADDRESS_LABELS_TABLE_DOC_LLM,
+            "vgi.doc_md": _ADDRESS_LABELS_TABLE_DOC_MD,
+            # VGI138: keywords must be a JSON array of strings.
+            "vgi.keywords": json.dumps(
+                [
+                    "labels",
+                    "component labels",
+                    "discovery",
+                    "vocabulary",
+                    "fields",
+                    "keys",
+                    "libpostal",
+                    "table",
+                ]
+            ),
+            "domain": "geospatial",
+            "vgi.example_queries": json.dumps(
+                [
+                    {
+                        "description": "List every component label libpostal can emit.",
+                        "sql": "SELECT * FROM postal.main.address_labels ORDER BY label",
+                    },
+                    {
+                        "description": "Count how many component labels libpostal recognizes.",
+                        "sql": "SELECT count(*) AS label_count FROM postal.main.address_labels",
+                    },
+                ]
+            ),
+        },
+    ),
+]
 
 _POSTAL_CATALOG = Catalog(
     name="postal",
@@ -137,7 +243,8 @@ _POSTAL_CATALOG = Catalog(
             tags={
                 "vgi.title": "Address Parsing & Normalization",
                 "vgi.keywords": _SCHEMA_KEYWORDS,
-                "vgi.source_url": "https://github.com/Query-farm/vgi-libpostal/blob/main/vgi_libpostal",
+                # VGI139: source_url belongs only on the catalog object, so the
+                # schema no longer carries a redundant per-object vgi.source_url.
                 "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
                 "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
                 # VGI123 classifying tags -- BARE keys (not vgi.-namespaced).
@@ -147,6 +254,7 @@ _POSTAL_CATALOG = Catalog(
                 # VGI506: representative example queries for the schema.
                 "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
             },
+            tables=list(_DISCOVERY_TABLES),
             functions=list(_FUNCTIONS),
         ),
     ],

@@ -132,10 +132,19 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
                     "Values are lower-cased; empty/whitespace input yields no "
                     "rows. See `address_labels()` for the full label set."
                 ),
-                keywords=(
-                    "parse address, components, long format, label value, unpivot, "
-                    "libpostal, table function, road, city, state, postcode"
-                ),
+                keywords=[
+                    "parse address",
+                    "components",
+                    "long format",
+                    "label value",
+                    "unpivot",
+                    "libpostal",
+                    "table function",
+                    "road",
+                    "city",
+                    "state",
+                    "postcode",
+                ],
                 relative_path=_TABLES_SRC,
             ),
             "vgi.result_columns_md": (
@@ -239,10 +248,18 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
                     "Takes no arguments; the returned label set is fixed and "
                     "deterministic."
                 ),
-                keywords=(
-                    "labels, component labels, discovery, schema, vocabulary, "
-                    "fields, keys, libpostal, table function, metadata"
-                ),
+                keywords=[
+                    "labels",
+                    "component labels",
+                    "discovery",
+                    "schema",
+                    "vocabulary",
+                    "fields",
+                    "keys",
+                    "libpostal",
+                    "table function",
+                    "metadata",
+                ],
                 relative_path=_TABLES_SRC,
             ),
             "vgi.result_columns_md": (
