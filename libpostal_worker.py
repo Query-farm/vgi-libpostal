@@ -66,18 +66,18 @@ _CATALOG_DESCRIPTION_LLM = (
     "lower-cased; an empty string yields an empty result, NULL yields NULL."
 )
 
-_CATALOG_DESCRIPTION_MD = (
-    "# postal\n\n"
-    "International address parsing and normalization powered by "
-    "[libpostal](https://github.com/openvenues/libpostal).\n\n"
-    "**Scalars:** `parse_address` (MAP), `expand_address` (LIST), and the "
-    "`address_*` component extractors (`address_house_number`, `address_road`, "
-    "`address_unit`, `address_city`, `address_state`, `address_postcode`, "
-    "`address_country`).\n\n"
-    "**Table functions:** `parse_address_components` (long-format parse) and "
-    "`address_labels` (discovery).\n\n"
-    "Output is lower-cased; empty string -> empty result, NULL -> NULL."
-)
+_CATALOG_DESCRIPTION_MD = """\
+# International Address Parsing & Normalization in SQL
+
+**Parse, standardize, and normalize free-form postal addresses from anywhere in the world directly in DuckDB SQL** — turn a messy one-line address string into clean, structured components (house number, road, unit, city, state, postcode, country) without leaving your query.
+
+The `postal` catalog brings [libpostal](https://github.com/openvenues/libpostal) — the open-source statistical address parser trained on OpenStreetMap and open address data — to SQL. It is built for data engineers, analysts, and anyone doing geocoding pre-processing, address standardization, record linkage, entity resolution, or deduplication over customer, shipping, or location data. Because libpostal is trained on real addresses from [OpenStreetMap](https://www.openstreetmap.org) across hundreds of countries and languages, it handles international formats, transliteration, and local abbreviations far better than hand-written regular expressions or fixed format rules.
+
+Under the hood this worker wraps libpostal's C library through its official Python binding, [pypostal](https://github.com/openvenues/pypostal), and exposes it over DuckDB's VGI interface. libpostal does two core things: it *parses* an address — using a sequence model to tag each token with a component label — and it *expands/normalizes* abbreviations into canonical forms (for example `St` → `street`, `E` → `east`, `Rd` → `road`), which is what makes two differently written versions of the same address comparable. All output is lower-cased; an empty string yields an empty result and `NULL` yields `NULL`, so the functions compose cleanly inside larger queries.
+
+The function surface is small and practical. The scalar `parse_address` returns a `MAP` of component label to value, while `expand_address` returns a `LIST` of normalized address variants ideal for fuzzy matching and joins. Convenience extractors — `address_house_number`, `address_road`, `address_unit`, `address_city`, `address_state`, `address_postcode`, and `address_country` — pull a single component inline in a projection. For set-oriented work, the table function `parse_address_components` returns one row per parsed component (long format), and `address_labels` lists every component label libpostal can emit so you can build UIs, validate fields, or pivot components into columns. For example: `SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')`, `SELECT postal.address_postcode('10 Downing St, London SW1A 2AA, UK')`, or `SELECT * FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216')`.
+
+Learn more from the [libpostal source repository](https://github.com/openvenues/libpostal) and its [installation and usage documentation](https://github.com/openvenues/libpostal#installation)."""
 
 _SCHEMA_DESCRIPTION_LLM = (
     "libpostal address parsing and normalization functions: parse an address into "
