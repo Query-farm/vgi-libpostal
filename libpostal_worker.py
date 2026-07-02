@@ -43,10 +43,12 @@ Usage:
 from __future__ import annotations
 
 import json
+import threading
 
 from vgi import Worker
 from vgi.catalog import Catalog, Schema, Table
 
+from vgi_libpostal import addresses
 from vgi_libpostal.scalars import SCALAR_FUNCTIONS
 from vgi_libpostal.tables import TABLE_FUNCTIONS, AddressLabelsFunction
 
@@ -75,7 +77,14 @@ The `postal` catalog brings [libpostal](https://github.com/openvenues/libpostal)
 
 Under the hood this worker wraps libpostal's C library through its official Python binding, [pypostal](https://github.com/openvenues/pypostal), and exposes it over DuckDB's VGI interface. libpostal does two core things: it *parses* an address — using a sequence model to tag each token with a component label — and it *expands/normalizes* abbreviations into canonical forms (for example `St` → `street`, `E` → `east`, `Rd` → `road`), which is what makes two differently written versions of the same address comparable. All output is lower-cased; an empty string yields an empty result and `NULL` yields `NULL`, so the functions compose cleanly inside larger queries.
 
-The function surface is small and practical. The scalar `parse_address` returns a `MAP` of component label to value, while `expand_address` returns a `LIST` of normalized address variants ideal for fuzzy matching and joins. Convenience extractors — `address_house_number`, `address_road`, `address_unit`, `address_city`, `address_state`, `address_postcode`, and `address_country` — pull a single component inline in a projection. For set-oriented work, the table function `parse_address_components` returns one row per parsed component (long format), and `address_labels` lists every component label libpostal can emit so you can build UIs, validate fields, or pivot components into columns. For example: `SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')`, `SELECT postal.address_postcode('10 Downing St, London SW1A 2AA, UK')`, or `SELECT * FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216')`.
+## Key concepts
+
+- **Parsing** turns a one-line address into labeled components (house number, road, unit, city, state, postcode, country, and more). Labels are statistical and best-effort — a borough can come back as a city district rather than a city — so treat them as a strong signal, not a strict schema.
+- **Normalization / expansion** rewrites abbreviations into canonical, fully-spelled-out forms and can return several valid variants for an ambiguous token; two addresses match when their expansion sets overlap.
+
+## When to reach for it
+
+Use this catalog for geocoding pre-processing, address standardization, record linkage, entity resolution, and deduplication over customer, shipping, or location data — anywhere you need messy free-form addresses made comparable directly in SQL, without shipping data to an external service. Browse the schema's categories to see the parsing, extraction, normalization, and discovery functions on offer.
 
 Learn more from the [libpostal source repository](https://github.com/openvenues/libpostal) and its [installation and usage documentation](https://github.com/openvenues/libpostal#installation)."""
 
@@ -87,11 +96,20 @@ _SCHEMA_DESCRIPTION_LLM = (
 )
 
 _SCHEMA_DESCRIPTION_MD = (
-    "Address parsing, component extraction, and normalization functions backed by "
-    "libpostal.\n\n"
-    "Scalars: `parse_address` (MAP), `expand_address` (LIST), and the `address_*` "
-    "component extractors. Table functions: `parse_address_components` (long "
-    "format) and `address_labels` (discovery). Output is lower-cased."
+    "# Address Parsing & Normalization\n\n"
+    "Turn free-form international postal addresses into structured, comparable "
+    "data directly in SQL, powered by libpostal.\n\n"
+    "## What's here\n\n"
+    "- **Parsing** — break a full address string into labeled components, "
+    "returned either as a `MAP` or as long-format `(label, value)` rows.\n"
+    "- **Component extraction** — pull a single field (city, road, postcode, "
+    "state, unit, country, house number) inline in a projection.\n"
+    "- **Normalization** — expand abbreviations into canonical forms for fuzzy "
+    "matching, joins, and deduplication.\n"
+    "- **Discovery** — list the vocabulary of component labels the parser can "
+    "emit.\n\n"
+    "Output is lower-cased; an empty string yields an empty result and `NULL` "
+    "yields `NULL`, so the functions compose cleanly inside larger queries."
 )
 
 # VGI506: representative, catalog-qualified example queries for the schema.
@@ -146,6 +164,108 @@ _SCHEMA_KEYWORDS = json.dumps(
     ]
 )
 
+# VGI408-413: the schema's category registry. Categories are the schema's
+# navigation/listing sections (and drive SEO); every function/table carries a
+# matching `vgi.category` (see `meta.object_tags`). Order here is display order.
+_SCHEMA_CATEGORIES = json.dumps(
+    [
+        {
+            "name": "parse",
+            "description": (
+                "Break a full address string into its labeled components, as a "
+                "MAP or as long-format (label, value) rows."
+            ),
+        },
+        {
+            "name": "extract",
+            "description": (
+                "Pull a single named component -- city, road, postcode, state, "
+                "unit, country, or house number -- out of an address inline."
+            ),
+        },
+        {
+            "name": "normalize",
+            "description": (
+                "Expand and normalize abbreviations into canonical forms for fuzzy matching, joins, and deduplication."
+            ),
+        },
+        {
+            "name": "discovery",
+            "description": "Discover the vocabulary of component labels libpostal's parser can emit.",
+        },
+    ]
+)
+
+# VGI152/VGI920: a fixed analyst task suite so `vgi-lint simulate` can measure
+# how well an agent actually uses this worker. Each `reference_sql` is
+# deterministic for a given libpostal model; `ignore_column_names` lets the
+# analyst alias result columns freely (values/rows are what's graded).
+_AGENT_TEST_TASKS = json.dumps(
+    [
+        {
+            "name": "extract-postcode",
+            "prompt": (
+                "What postal code does the address '781 Franklin Ave, Brooklyn, "
+                "NY 11216' contain? Return just the postcode as a single value."
+            ),
+            "reference_sql": "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "extract-house-number",
+            "prompt": (
+                "Extract the house (street) number from '1600 Pennsylvania Ave "
+                "NW, Washington, DC 20500'. Return it as a single value."
+            ),
+            "reference_sql": (
+                "SELECT postal.main.address_house_number('1600 Pennsylvania Ave NW, Washington, DC 20500')"
+            ),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "parse-city-from-map",
+            "prompt": (
+                "Parse '1600 Pennsylvania Ave NW, Washington, DC 20500' into its "
+                "address components and return the city."
+            ),
+            "reference_sql": (
+                "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')['city']"
+            ),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "components-road-long-format",
+            "prompt": (
+                "Using the long-format component parser, what value is labeled "
+                "'road' for '781 Franklin Ave, Brooklyn, NY 11216'?"
+            ),
+            "reference_sql": (
+                "SELECT value FROM postal.main.parse_address_components("
+                "'781 Franklin Ave, Brooklyn, NY 11216') WHERE label = 'road'"
+            ),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "count-component-labels",
+            "prompt": ("How many distinct address component labels can this worker's discovery function report?"),
+            "reference_sql": "SELECT count(*) FROM postal.main.address_labels()",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "normalize-contains-expansion",
+            "prompt": (
+                "When you normalize/expand the abbreviated address '120 E 96th "
+                "St', is '120 east 96th street' one of the expansions it "
+                "produces? Return a single boolean."
+            ),
+            "reference_sql": (
+                "SELECT list_contains(postal.main.expand_address('120 E 96th St'), '120 east 96th street')"
+            ),
+            "ignore_column_names": True,
+        },
+    ]
+)
+
 # VGI311: `address_labels` is a parameterless table function -- it always returns
 # the same fixed rows -- so it is ALSO exposed as a regular table that scans that
 # function. This lets consumers write `SELECT * FROM postal.main.address_labels`
@@ -154,8 +274,8 @@ _ADDRESS_LABELS_TABLE_DOC_LLM = (
     "## address_labels (table)\n\n"
     "Discovery table listing **every component label libpostal's parser can "
     "emit**, one per row. It is the table form of the `address_labels()` table "
-    "function, exposed without parentheses so you can `SELECT * FROM "
-    "postal.main.address_labels`.\n\n"
+    "function, exposed without parentheses so you can query it as a plain "
+    "table (no trailing `()`).\n\n"
     "**Use it when** you need the vocabulary of keys readable out of "
     "`parse_address(...)` or filterable in `parse_address_components(...)` -- "
     "for building a UI, validating a label, or pivoting components into "
@@ -164,8 +284,8 @@ _ADDRESS_LABELS_TABLE_DOC_LLM = (
 _ADDRESS_LABELS_TABLE_DOC_MD = (
     "# address_labels\n\n"
     "Discovery table of every component label libpostal can emit, exposed as a "
-    "regular table so you can `SELECT * FROM postal.main.address_labels` without "
-    "parentheses.\n\n"
+    "regular table so you can query it as a plain table (no trailing "
+    "parentheses).\n\n"
     "## Columns\n\n"
     "- `label` (VARCHAR, primary key) -- a component label libpostal can emit "
     "(`road`, `city`, `state`, `postcode`, `country`, `house_number`, `unit`, "
@@ -190,6 +310,8 @@ _DISCOVERY_TABLES: list[Table] = [
             "vgi.title": "Address Component Labels Table",
             "vgi.doc_llm": _ADDRESS_LABELS_TABLE_DOC_LLM,
             "vgi.doc_md": _ADDRESS_LABELS_TABLE_DOC_MD,
+            # VGI409/VGI411: primary category (from the schema's vgi.categories).
+            "vgi.category": "discovery",
             # VGI138: keywords must be a JSON array of strings.
             "vgi.keywords": json.dumps(
                 [
@@ -235,6 +357,8 @@ _POSTAL_CATALOG = Catalog(
         "vgi.license": "MIT",
         "vgi.support_contact": "https://github.com/Query-farm/vgi-libpostal/issues",
         "vgi.support_policy_url": "https://github.com/Query-farm/vgi-libpostal/blob/main/README.md",
+        # VGI152/VGI920: analyst task suite for `vgi-lint simulate`.
+        "vgi.agent_test_tasks": _AGENT_TEST_TASKS,
     },
     schemas=[
         Schema(
@@ -247,6 +371,8 @@ _POSTAL_CATALOG = Catalog(
                 # schema no longer carries a redundant per-object vgi.source_url.
                 "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
                 "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
+                # VGI408-413: the category registry every object's vgi.category refers to.
+                "vgi.categories": _SCHEMA_CATEGORIES,
                 # VGI123 classifying tags -- BARE keys (not vgi.-namespaced).
                 "domain": "geospatial",
                 "category": "parsing",
@@ -268,7 +394,14 @@ class LibpostalWorker(Worker):
 
 
 def main() -> None:
-    """Run the libpostal worker process (stdio or, via flags, HTTP)."""
+    """Run the libpostal worker process (stdio or, via flags, HTTP).
+
+    Kicks off libpostal's ~2 GB model load in a background daemon thread so the
+    serve loop / ATTACH handshake starts immediately while the cold load happens
+    off the critical path; the first parse/expand query then finds the model
+    already resident (see ``vgi_libpostal.addresses.warm_up``).
+    """
+    threading.Thread(target=addresses.warm_up, name="libpostal-warmup", daemon=True).start()
     LibpostalWorker.main()
 
 

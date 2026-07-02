@@ -43,6 +43,7 @@ def object_tags(
     doc_llm: str,
     doc_md: str,
     keywords: list[str],
+    category: str,
     relative_path: str,
 ) -> dict[str, str]:
     """Build the standard per-object discovery/description tags.
@@ -55,6 +56,9 @@ def object_tags(
             distinct content from ``doc_llm``.
         keywords: Search terms / synonyms (``vgi.keywords``), serialized as a
             JSON array of strings (VGI138).
+        category: The object's primary ``vgi.category`` (VGI409/VGI411); must
+            name one of the categories declared in the schema's
+            ``vgi.categories`` registry.
         relative_path: Retained for call-site documentation of where the object
             is implemented; no longer emitted as a tag (VGI139 keeps
             ``source_url`` on the catalog only).
@@ -68,4 +72,6 @@ def object_tags(
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
         "vgi.keywords": keywords_json(keywords),
+        # VGI409/VGI411: primary category, drawn from the schema's vgi.categories.
+        "vgi.category": category,
     }

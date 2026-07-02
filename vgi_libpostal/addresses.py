@@ -28,8 +28,37 @@ The full set of component labels libpostal can emit is :data:`COMPONENT_LABELS`.
 
 from __future__ import annotations
 
+import threading
+
 from postal.expand import expand_address as _expand_address
 from postal.parser import parse_address as _parse_address
+
+# libpostal is a C library with process-global model state: the first parse call
+# in a fresh process lazily memory-maps its ~2 GB statistical parser model
+# (~15-20s cold), and concurrent first calls would race that one-time setup. We
+# serialize every parse/expand through a single lock -- cheap once warm -- and
+# offer :func:`warm_up` to pay the load once at worker startup so later query
+# and agent-analyst calls run against an already-resident model.
+_LIBPOSTAL_LOCK = threading.Lock()
+_warmed = False
+
+
+def warm_up() -> None:
+    """Eagerly load libpostal's parser + expansion models (idempotent, thread-safe).
+
+    Runs one throwaway parse and expansion so libpostal maps its ~2 GB models
+    into memory now, moving that one-time cold-load cost out of the first user
+    query. Safe to call from a background thread at worker startup; a real query
+    arriving mid-load simply waits on the same lock rather than racing setup.
+    """
+    global _warmed
+    with _LIBPOSTAL_LOCK:
+        if _warmed:
+            return
+        _parse_address("1 main st, springfield")
+        _expand_address("1 main st")
+        _warmed = True
+
 
 # The component labels libpostal's address parser can emit. This is the model's
 # documented tag set (libpostal >= 1.1). Exposed via the ``address_labels()``
@@ -70,7 +99,10 @@ def parse_address_pairs(text: str | None) -> list[tuple[str, str]]:
     if not text:
         return []
     # libpostal returns (value, label); flip to (label, value) for our API.
-    return [(label, value) for (value, label) in _parse_address(text)]
+    # The lock serializes libpostal's non-thread-safe global parser state and
+    # coordinates with startup warm-up (see module docstring / warm_up).
+    with _LIBPOSTAL_LOCK:
+        return [(label, value) for (value, label) in _parse_address(text)]
 
 
 def parse_address_map(text: str | None) -> dict[str, str]:
@@ -99,4 +131,6 @@ def expand_address(text: str | None) -> list[str]:
     text = text.strip()
     if not text:
         return []
-    return list(_expand_address(text))
+    # Serialize through the shared lock (see parse_address_pairs / warm_up).
+    with _LIBPOSTAL_LOCK:
+        return list(_expand_address(text))

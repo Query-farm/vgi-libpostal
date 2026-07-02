@@ -88,6 +88,7 @@ class ParseAddressFunction(ScalarFunction):
         categories = ["libpostal", "parse"]
         tags = object_tags(
             title="Parse Address Into Component Map",
+            category="parse",
             doc_llm=(
                 "## parse_address\n\n"
                 "Parse a single free-form postal address string into a "
@@ -184,6 +185,7 @@ class ExpandAddressFunction(ScalarFunction):
         categories = ["libpostal", "expand"]
         tags = object_tags(
             title="Expand Address Abbreviations",
+            category="normalize",
             doc_llm=(
                 "## expand_address\n\n"
                 "Normalize a single address string into a `VARCHAR[]` of "
@@ -278,6 +280,7 @@ class AddressHouseNumberFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract House Number Component",
+            category="extract",
             doc_llm=(
                 "## address_house_number\n\n"
                 "Convenience scalar that parses an address with libpostal and "
@@ -341,6 +344,7 @@ class AddressRoadFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract Road Street Component",
+            category="extract",
             doc_llm=(
                 "## address_road\n\n"
                 "Convenience scalar that parses an address with libpostal and "
@@ -404,6 +408,7 @@ class AddressUnitFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract Unit Apartment Component",
+            category="extract",
             doc_llm=(
                 "## address_unit\n\n"
                 "Convenience scalar that parses an address with libpostal and "
@@ -471,6 +476,7 @@ class AddressCityFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract City Locality Component",
+            category="extract",
             doc_llm=(
                 "## address_city\n\n"
                 "Convenience scalar that parses an address with libpostal and "
@@ -541,6 +547,7 @@ class AddressStateFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract State Province Component",
+            category="extract",
             doc_llm=(
                 "## address_state\n\n"
                 "Convenience scalar that parses an address with libpostal and "
@@ -606,6 +613,7 @@ class AddressPostcodeFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract Postcode ZIP Component",
+            category="extract",
             doc_llm=(
                 "## address_postcode\n\n"
                 "Convenience scalar that parses an address with libpostal and "
@@ -670,6 +678,7 @@ class AddressCountryFunction(ScalarFunction):
         categories = ["libpostal", "extract"]
         tags = object_tags(
             title="Extract Country Component",
+            category="extract",
             doc_llm=(
                 "## address_country\n\n"
                 "Convenience scalar that parses an address with libpostal and "

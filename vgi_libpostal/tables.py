@@ -101,6 +101,7 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
         tags = {
             **object_tags(
                 title="Parse Address Components Long Format",
+                category="parse",
                 doc_llm=(
                     "## parse_address_components\n\n"
                     "Table function: parse a single address string and emit one "
@@ -221,6 +222,7 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
         tags = {
             **object_tags(
                 title="List Address Component Labels",
+                category="discovery",
                 doc_llm=(
                     "## address_labels\n\n"
                     "Discovery table function: emit **every component label "

@@ -1,0 +1,14 @@
+# vgi-lint-check configuration for the libpostal worker.
+#
+# libpostal lazily maps its ~2 GB statistical parser model into memory on the
+# FIRST parse call in a fresh worker process (~15-20s cold; expansion is fast).
+# So example queries that touch the parser need a generous per-query timeout and
+# a raised "slow example" threshold, and examples are run serially so the model
+# loads exactly once (on the first parse) and every later example runs warm.
+#
+# This file is auto-discovered from the repo root by both the CI
+# `Query-farm/vgi-lint-check@v1` action and a local `vgi-lint` run.
+[execution]
+timeout = 120
+slow_seconds = 30
+concurrency = 1
