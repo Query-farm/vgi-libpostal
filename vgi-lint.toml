@@ -2,13 +2,24 @@
 #
 # libpostal lazily maps its ~2 GB statistical parser model into memory on the
 # FIRST parse call in a fresh worker process (~15-20s cold; expansion is fast).
-# So example queries that touch the parser need a generous per-query timeout and
-# a raised "slow example" threshold, and examples are run serially so the model
-# loads exactly once (on the first parse) and every later example runs warm.
+# The worker starts loading that model in a background thread at launch, but the
+# cold load can still hold the process busy well past the linter's default
+# timeouts, so we widen the execution window (this HIDES no finding -- it only
+# gives a legitimately slow, model-loading worker time to answer):
+#
+#   * timeout       (execute_timeout)   -- per example-query wall-clock cap.
+#   * slow_seconds  (slow_example_seconds) -- raise the "slow example" warning bar.
+#   * scan_timeout  -- the VGI911/VGI912 `SELECT * FROM <rel> LIMIT 10` scan probe
+#     runs on its OWN, separate (default 10s) cap. The very first scan against a
+#     fresh worker pays the full cold model load before it can return, so 10s is
+#     not enough; raise it to match the example-query timeout.
+#   * concurrency   (execute_concurrency) -- run serially so the ~2 GB model loads
+#     exactly once (on the first parse) and every later query runs warm.
 #
 # This file is auto-discovered from the repo root by both the CI
 # `Query-farm/vgi-lint-check@v1` action and a local `vgi-lint` run.
 [execution]
 timeout = 120
 slow_seconds = 30
+scan_timeout = 120
 concurrency = 1

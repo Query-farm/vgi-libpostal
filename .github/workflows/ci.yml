@@ -233,6 +233,5 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/.libpostal/lib
         with:
-          version: "0.37.0"
           location: "${{ github.workspace }}/.venv/bin/python ${{ github.workspace }}/libpostal_worker.py"
           fail-on: info

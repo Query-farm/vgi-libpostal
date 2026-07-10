@@ -116,8 +116,8 @@ class ParseAddressFunction(ScalarFunction):
                 "`MAP(VARCHAR, VARCHAR)` of libpostal components.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500');\n"
-                "SELECT postal.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode'];\n"
+                "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500');\n"
+                "SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode'];\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "- Keys are libpostal labels (`house_number`, `road`, `unit`, "
@@ -149,11 +149,11 @@ class ParseAddressFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')",
+                sql="SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')",
                 description="Parse a US address into components",
             ),
             FunctionExample(
-                sql="SELECT postal.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode']",
+                sql="SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode']",
                 description="Pull the postcode out of the parsed map",
             ),
         ]
@@ -212,8 +212,8 @@ class ExpandAddressFunction(ScalarFunction):
                 "deduplication.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.expand_address('120 E 96th St');\n"
-                "SELECT UNNEST(postal.expand_address('120 E 96th St'));\n"
+                "SELECT postal.main.expand_address('120 E 96th St');\n"
+                "SELECT UNNEST(postal.main.expand_address('120 E 96th St'));\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "- Multiple expansions can be returned for an ambiguous token.\n"
@@ -240,11 +240,11 @@ class ExpandAddressFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.expand_address('120 E 96th St')",
+                sql="SELECT postal.main.expand_address('120 E 96th St')",
                 description="Normalized expansions of an abbreviated address",
             ),
             FunctionExample(
-                sql="SELECT UNNEST(postal.expand_address('120 E 96th St'))",
+                sql="SELECT UNNEST(postal.main.expand_address('120 E 96th St'))",
                 description="One expansion per row",
             ),
         ]
@@ -299,7 +299,7 @@ class AddressHouseNumberFunction(ScalarFunction):
                 "an address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_house_number('781 Franklin Ave, Brooklyn, NY 11216');  -- 781\n"
+                "SELECT postal.main.address_house_number('781 Franklin Ave, Brooklyn, NY 11216');  -- 781\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "Returns `NULL` when no house number is detected and for `NULL` "
@@ -318,7 +318,7 @@ class AddressHouseNumberFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_house_number('781 Franklin Ave, Brooklyn, NY 11216')",
+                sql="SELECT postal.main.address_house_number('781 Franklin Ave, Brooklyn, NY 11216')",
                 description="House number of an address",
             ),
         ]
@@ -362,7 +362,7 @@ class AddressRoadFunction(ScalarFunction):
                 "address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_road('781 Franklin Ave, Brooklyn, NY 11216');  -- franklin ave\n"
+                "SELECT postal.main.address_road('781 Franklin Ave, Brooklyn, NY 11216');  -- franklin ave\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "Output is lower-cased. Returns `NULL` when no road is detected "
@@ -382,7 +382,7 @@ class AddressRoadFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_road('781 Franklin Ave, Brooklyn, NY 11216')",
+                sql="SELECT postal.main.address_road('781 Franklin Ave, Brooklyn, NY 11216')",
                 description="Street (road) of an address",
             ),
         ]
@@ -427,7 +427,7 @@ class AddressUnitFunction(ScalarFunction):
                 "of an address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128');  -- apt 5b\n"
+                "SELECT postal.main.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128');  -- apt 5b\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "`NULL` is common -- most addresses have no unit. Returns `NULL` "
@@ -450,7 +450,7 @@ class AddressUnitFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128')",
+                sql="SELECT postal.main.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128')",
                 description="Unit / apartment of an address",
             ),
         ]
@@ -499,7 +499,7 @@ class AddressCityFunction(ScalarFunction):
                 "address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500');  -- washington\n"
+                "SELECT postal.main.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500');  -- washington\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "libpostal may classify boroughs/districts as `city_district` and "
@@ -521,7 +521,7 @@ class AddressCityFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500')",
+                sql="SELECT postal.main.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500')",
                 description="City of an address",
             ),
         ]
@@ -566,7 +566,7 @@ class AddressStateFunction(ScalarFunction):
                 "component of an address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_state('781 Franklin Ave, Brooklyn, NY 11216');  -- ny\n"
+                "SELECT postal.main.address_state('781 Franklin Ave, Brooklyn, NY 11216');  -- ny\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "Output is lower-cased (`NY` -> `ny`). Returns `NULL` when no "
@@ -587,7 +587,7 @@ class AddressStateFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_state('781 Franklin Ave, Brooklyn, NY 11216')",
+                sql="SELECT postal.main.address_state('781 Franklin Ave, Brooklyn, NY 11216')",
                 description="State / province of an address",
             ),
         ]
@@ -631,7 +631,7 @@ class AddressPostcodeFunction(ScalarFunction):
                 "an address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_postcode('781 Franklin Ave, Brooklyn, NY 11216');  -- 11216\n"
+                "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216');  -- 11216\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "Returns `NULL` when no postcode is detected and for `NULL` input. "
@@ -652,7 +652,7 @@ class AddressPostcodeFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
+                sql="SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
                 description="Postal code of an address",
             ),
         ]
@@ -695,7 +695,7 @@ class AddressCountryFunction(ScalarFunction):
                 "Return the libpostal `country` component of an address.\n\n"
                 "## Usage\n\n"
                 "```sql\n"
-                "SELECT postal.address_country('10 Downing St, London SW1A 2AA, United Kingdom');  -- united kingdom\n"
+                "SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom');\n"
                 "```\n\n"
                 "## Notes\n\n"
                 "Returns `NULL` when the country is absent or implied, and for "
@@ -714,7 +714,7 @@ class AddressCountryFunction(ScalarFunction):
         )
         examples = [
             FunctionExample(
-                sql="SELECT postal.address_country('10 Downing St, London SW1A 2AA, United Kingdom')",
+                sql="SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom')",
                 description="Country of an address",
             ),
         ]

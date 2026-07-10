@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.8.5",
+#     "vgi-python[http]>=0.14.0",
 #     "postal>=1.1",
 # ]
 # ///
@@ -263,6 +263,54 @@ _AGENT_TEST_TASKS = json.dumps(
             ),
             "ignore_column_names": True,
         },
+        {
+            "name": "extract-road",
+            "prompt": (
+                "What is the road (street) of the address '781 Franklin Ave, "
+                "Brooklyn, NY 11216'? Return just the road as a single value."
+            ),
+            "reference_sql": "SELECT postal.main.address_road('781 Franklin Ave, Brooklyn, NY 11216')",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "extract-state",
+            "prompt": (
+                "What state/province does the address '781 Franklin Ave, "
+                "Brooklyn, NY 11216' contain? Return just the state as a single "
+                "value. Note this worker lower-cases its output."
+            ),
+            "reference_sql": "SELECT postal.main.address_state('781 Franklin Ave, Brooklyn, NY 11216')",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "extract-city",
+            "prompt": (
+                "What is the city of the address '1600 Pennsylvania Ave NW, "
+                "Washington, DC 20500'? Return just the city as a single value."
+            ),
+            "reference_sql": ("SELECT postal.main.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500')"),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "extract-unit",
+            "prompt": (
+                "What is the unit (apartment/suite) of the address 'Apt 5B, 120 "
+                "E 96th St, New York, NY 10128'? Return just the unit as a single "
+                "value."
+            ),
+            "reference_sql": ("SELECT postal.main.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128')"),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "extract-country",
+            "prompt": (
+                "What country does the address '10 Downing St, London SW1A 2AA, "
+                "United Kingdom' contain? Return just the country as a single "
+                "value."
+            ),
+            "reference_sql": ("SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom')"),
+            "ignore_column_names": True,
+        },
     ]
 )
 
@@ -291,9 +339,10 @@ _ADDRESS_LABELS_TABLE_DOC_MD = (
     "(`road`, `city`, `state`, `postcode`, `country`, `house_number`, `unit`, "
     "...).\n\n"
     "## Usage\n\n"
-    "```sql\n"
-    "SELECT * FROM postal.main.address_labels ORDER BY label;\n"
-    "```"
+    "Query it like any table: order the `label` column to browse the full "
+    "vocabulary, filter it to validate that a candidate key is one libpostal "
+    "recognizes, or count the rows to size the label set. Ready-to-run examples "
+    "are carried in this relation's example-query metadata."
 )
 
 _DISCOVERY_TABLES: list[Table] = [
@@ -330,7 +379,7 @@ _DISCOVERY_TABLES: list[Table] = [
                 [
                     {
                         "description": "List every component label libpostal can emit.",
-                        "sql": "SELECT * FROM postal.main.address_labels ORDER BY label",
+                        "sql": "SELECT label FROM postal.main.address_labels ORDER BY label",
                     },
                     {
                         "description": "Count how many component labels libpostal recognizes.",
