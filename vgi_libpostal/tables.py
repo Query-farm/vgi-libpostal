@@ -108,7 +108,7 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
                     "Table function: parse a single address string and emit one "
                     "`(label, value)` **row per libpostal component**, in "
                     "libpostal's order. This is the long-format complement to the "
-                    "`parse_address` MAP scalar.\n\n"
+                    "`parse_address` `MAP` scalar.\n\n"
                     "**Use it when** you want to filter, join, or aggregate over "
                     "address components in set-based SQL (e.g. "
                     "`... WHERE label = 'city'`) rather than indexing a map.\n\n"
@@ -123,7 +123,7 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
                     "# parse_address_components\n\n"
                     "Parse an address into one `(label, value)` row per libpostal "
                     "component -- the long-format complement to the "
-                    "`parse_address` MAP scalar.\n\n"
+                    "`parse_address` `MAP` scalar.\n\n"
                     "## Result\n\n"
                     "Each returned row pairs a libpostal component `label` (such as "
                     "`house_number`, `road`, `city`, `state`, or `postcode`) with "
@@ -152,6 +152,22 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
                     "postcode",
                 ],
                 relative_path=_TABLES_SRC,
+                example_queries=[
+                    {
+                        "description": "Long-format parse of a US address, one component per row.",
+                        "sql": (
+                            "SELECT label, value FROM postal.main.parse_address_components("
+                            "'781 Franklin Ave, Brooklyn, NY 11216') ORDER BY label"
+                        ),
+                    },
+                    {
+                        "description": "Pull one component out by filtering on its label.",
+                        "sql": (
+                            "SELECT value FROM postal.main.parse_address_components("
+                            "'1600 Pennsylvania Ave NW, Washington, DC 20500') WHERE label = 'city'"
+                        ),
+                    },
+                ],
             ),
             # VGI307/VGI321: structured result schema (replaces retired result_columns_md).
             "vgi.result_columns_schema": json.dumps(
@@ -283,6 +299,16 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
                     "metadata",
                 ],
                 relative_path=_TABLES_SRC,
+                example_queries=[
+                    {
+                        "description": "Count how many component labels libpostal emits.",
+                        "sql": "SELECT count(*) AS label_count FROM postal.main.address_labels()",
+                    },
+                    {
+                        "description": "List the component labels in alphabetical order.",
+                        "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label",
+                    },
+                ],
             ),
             # VGI307/VGI321: structured result schema (replaces retired result_columns_md).
             "vgi.result_columns_schema": json.dumps(

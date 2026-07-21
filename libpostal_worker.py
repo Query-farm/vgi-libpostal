@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.14.0",
+#     "vgi-python[http]>=0.16.0",
 #     "postal>=1.1",
 # ]
 # ///
@@ -84,13 +84,13 @@ Under the hood this worker wraps libpostal's C library through its official Pyth
 
 ## When to reach for it
 
-Use this catalog for geocoding pre-processing, address standardization, record linkage, entity resolution, and deduplication over customer, shipping, or location data — anywhere you need messy free-form addresses made comparable directly in SQL, without shipping data to an external service. Browse the schema's categories to see the parsing, extraction, normalization, and discovery functions on offer.
+Use this catalog for geocoding pre-processing, address standardization, record linkage, entity resolution, and deduplication over customer, shipping, or location data — anywhere you need messy free-form addresses made comparable directly in SQL, without shipping data to an external service.
 
 Learn more from the [libpostal source repository](https://github.com/openvenues/libpostal) and its [installation and usage documentation](https://github.com/openvenues/libpostal#installation)."""
 
 _SCHEMA_DESCRIPTION_LLM = (
     "libpostal address parsing and normalization functions: parse an address into "
-    "a MAP or long-format rows of components, extract a single component (city, "
+    "a `MAP` or long-format rows of components, extract a single component (city, "
     "state, postcode, country, road, unit, house_number), expand abbreviations, "
     "and discover the set of component labels libpostal can emit."
 )
@@ -112,14 +112,38 @@ _SCHEMA_DESCRIPTION_MD = (
     "yields `NULL`, so the functions compose cleanly inside larger queries."
 )
 
-# VGI506: representative, catalog-qualified example queries for the schema.
-_SCHEMA_EXAMPLE_QUERIES = (
-    "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500');\n"
-    "SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode'];\n"
-    "SELECT UNNEST(postal.main.expand_address('120 E 96th St'));\n"
-    "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216');\n"
-    "SELECT * FROM postal.main.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216');\n"
-    "SELECT label FROM postal.main.address_labels() ORDER BY label;"
+# VGI506/VGI515: representative, catalog-qualified example queries for the schema,
+# each carrying a human-readable description (JSON list of {description, sql}).
+_SCHEMA_EXAMPLE_QUERIES = json.dumps(
+    [
+        {
+            "description": "Parse a US address into a MAP of libpostal components.",
+            "sql": "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')",
+        },
+        {
+            "description": "Pull just the postcode out of a parsed UK address.",
+            "sql": "SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode']",
+        },
+        {
+            "description": "Normalize an abbreviated address into one expansion per row.",
+            "sql": "SELECT UNNEST(postal.main.expand_address('120 E 96th St'))",
+        },
+        {
+            "description": "Extract a single component (the postcode) inline.",
+            "sql": "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
+        },
+        {
+            "description": "Long-format parse: one (label, value) row per component.",
+            "sql": (
+                "SELECT label, value FROM postal.main.parse_address_components("
+                "'781 Franklin Ave, Brooklyn, NY 11216') ORDER BY label"
+            ),
+        },
+        {
+            "description": "List the vocabulary of component labels libpostal can emit.",
+            "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label",
+        },
+    ]
 )
 
 # VGI138: vgi.keywords must be a JSON array of strings, not a comma-separated
@@ -173,7 +197,7 @@ _SCHEMA_CATEGORIES = json.dumps(
             "name": "parse",
             "description": (
                 "Break a full address string into its labeled components, as a "
-                "MAP or as long-format (label, value) rows."
+                "`MAP` or as long-format (label, value) rows."
             ),
         },
         {
@@ -335,7 +359,7 @@ _ADDRESS_LABELS_TABLE_DOC_MD = (
     "regular table so you can query it as a plain table (no trailing "
     "parentheses).\n\n"
     "## Columns\n\n"
-    "- `label` (VARCHAR, primary key) -- a component label libpostal can emit "
+    "- `label` (`VARCHAR`, primary key) -- a component label libpostal can emit "
     "(`road`, `city`, `state`, `postcode`, `country`, `house_number`, `unit`, "
     "...).\n\n"
     "## Usage\n\n"

@@ -45,6 +45,7 @@ def object_tags(
     keywords: list[str],
     category: str,
     relative_path: str,
+    example_queries: list[dict[str, str]] | None = None,
 ) -> dict[str, str]:
     """Build the standard per-object discovery/description tags.
 
@@ -62,12 +63,16 @@ def object_tags(
         relative_path: Retained for call-site documentation of where the object
             is implemented; no longer emitted as a tag (VGI139 keeps
             ``source_url`` on the catalog only).
+        example_queries: Optional list of ``{"description", "sql"}`` objects
+            emitted as ``vgi.example_queries`` (VGI515) so every example carries
+            a human-readable description -- the native ``duckdb_functions()``
+            examples carrier drops descriptions on the wire.
 
     Returns:
         A dict of the standard per-object tags.
     """
     _ = relative_path  # implementation link lives on the catalog (VGI139)
-    return {
+    tags = {
         "vgi.title": title,
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
@@ -75,3 +80,7 @@ def object_tags(
         # VGI409/VGI411: primary category, drawn from the schema's vgi.categories.
         "vgi.category": category,
     }
+    if example_queries is not None:
+        # VGI515: described examples ({"description","sql"}), JSON-serialized.
+        tags["vgi.example_queries"] = json.dumps(example_queries)
+    return tags

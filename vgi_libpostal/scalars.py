@@ -146,6 +146,16 @@ class ParseAddressFunction(ScalarFunction):
                 "record linkage",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Parse a US address into a component MAP.",
+                    "sql": "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')",
+                },
+                {
+                    "description": "Pull the postcode out of the parsed map.",
+                    "sql": "SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode']",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -237,6 +247,16 @@ class ExpandAddressFunction(ScalarFunction):
                 "saint",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Normalized expansions of an abbreviated address.",
+                    "sql": "SELECT postal.main.expand_address('120 E 96th St')",
+                },
+                {
+                    "description": "One normalized expansion per row.",
+                    "sql": "SELECT UNNEST(postal.main.expand_address('120 E 96th St'))",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -315,6 +335,12 @@ class AddressHouseNumberFunction(ScalarFunction):
                 "parse",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract just the house (street) number from an address.",
+                    "sql": "SELECT postal.main.address_house_number('781 Franklin Ave, Brooklyn, NY 11216')",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -379,6 +405,12 @@ class AddressRoadFunction(ScalarFunction):
                 "parse",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract just the road (street name) from an address.",
+                    "sql": "SELECT postal.main.address_road('781 Franklin Ave, Brooklyn, NY 11216')",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -447,6 +479,12 @@ class AddressUnitFunction(ScalarFunction):
                 "parse",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract the unit (apartment/suite) from an address.",
+                    "sql": "SELECT postal.main.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128')",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -518,6 +556,12 @@ class AddressCityFunction(ScalarFunction):
                 "parse",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract just the city (locality) from an address.",
+                    "sql": "SELECT postal.main.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500')",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -584,6 +628,12 @@ class AddressStateFunction(ScalarFunction):
                 "parse",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract the state/province from an address (output is lower-cased).",
+                    "sql": "SELECT postal.main.address_state('781 Franklin Ave, Brooklyn, NY 11216')",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -649,6 +699,12 @@ class AddressPostcodeFunction(ScalarFunction):
                 "parse",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract just the postcode (ZIP) from an address.",
+                    "sql": "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
+                },
+            ],
         )
         examples = [
             FunctionExample(
@@ -711,6 +767,12 @@ class AddressCountryFunction(ScalarFunction):
                 "international",
             ],
             relative_path=_SCALARS_SRC,
+            example_queries=[
+                {
+                    "description": "Extract the country from an international address.",
+                    "sql": "SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom')",
+                },
+            ],
         )
         examples = [
             FunctionExample(

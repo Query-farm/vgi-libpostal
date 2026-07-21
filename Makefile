@@ -20,8 +20,11 @@
 # `uv run --no-sync` reuses the project `.venv` where pypostal is already built,
 # so that is the worker command DuckDB uses for ATTACH.
 
-# Worker command DuckDB uses for ATTACH (overridable). --no-sync reuses .venv.
-WORKER_STDIO    ?= uv run --no-sync libpostal_worker.py
+# Worker command DuckDB uses for ATTACH (overridable). Launch straight from the
+# already-built project .venv (where pypostal is compiled) — same as CI's
+# WORKER_CMD — so ATTACH never re-resolves deps / rebuilds pypostal and always
+# runs against the pinned SDK in .venv (not a stale PEP-723 ephemeral env).
+WORKER_STDIO    ?= .venv/bin/python libpostal_worker.py
 
 # haybarn-unittest lives in the uv tools bin; keep it on PATH.
 HAYBARN_BIN     ?= $(HOME)/.local/bin
