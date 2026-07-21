@@ -48,6 +48,20 @@ dev = [
 http = [
     "vgi-python[http]>=0.16.0",
 ]
+# HTTP-serving extra installed by the Docker image (`pip install '.[serve]'`).
+# Alias of `http`: the container serves the worker over HTTP via `vgi-serve`,
+# which needs vgi-python's `http` extra (waitress). Kept as a separate name so
+# the image install line matches the other Python workers (vgi-llm / vgi-sklearn).
+serve = [
+    "vgi-python[http]>=0.16.0",
+]
+
+# Launch the worker without the repo-root shim once the wheel is installed:
+#   vgi-libpostal-worker            # serve over stdio
+#   vgi-libpostal-worker --http     # serve over HTTP
+# The Docker image's stdio entrypoint uses this; HTTP mode uses `vgi-serve`.
+[project.scripts]
+vgi-libpostal-worker = "vgi_libpostal.worker:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -68,6 +82,9 @@ select = ["E", "F", "I", "UP", "B", "SIM", "D"]
 "tests/**" = ["D"]
 # The PEP 723 inline-script header wraps dependency pins that should stay one-per-line.
 "libpostal_worker.py" = ["E501"]
+# worker.py carries the long-form catalog/schema markdown descriptions
+# (vgi.doc_md), which are single prose lines that must not be hard-wrapped.
+"vgi_libpostal/worker.py" = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

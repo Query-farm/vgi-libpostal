@@ -71,7 +71,10 @@ trap cleanup EXIT
 
 case "$TRANSPORT" in
   subprocess)
-    export VGI_LIBPOSTAL_WORKER="$WORKER_CMD"
+    # Honor a pre-set LOCATION (e.g. the docker image_test passes a
+    # `docker run -i --rm <image> stdio` command as VGI_LIBPOSTAL_WORKER);
+    # otherwise the WORKER_CMD is the stdio LOCATION DuckDB spawns.
+    export VGI_LIBPOSTAL_WORKER="${VGI_LIBPOSTAL_WORKER:-$WORKER_CMD}"
     ;;
 
   http)
@@ -100,39 +103,47 @@ case "$TRANSPORT" in
       ' "$sf" > "$sf.tmp" && mv "$sf.tmp" "$sf"
     done
 
-    # Boot the worker in HTTP mode on an auto-selected port. The worker writes
-    # the chosen port to --port-file atomically (tmp + rename), so we watch for
-    # the file to appear rather than parsing stdout. HTTP mode needs the `http`
-    # extra (waitress); CI runs `uv sync --extra http` and the PEP 723 header
-    # lists `vgi-python[http]`.
-    PORT_FILE="$(mktemp -u "${TMPDIR:-/tmp}/libpostal-port.XXXXXX")"
-    LOG_FILE="${TMPDIR:-/tmp}/libpostal-http-server.log"
-    echo "Starting HTTP worker: $WORKER_CMD --http --port 0 --port-file $PORT_FILE"
-    # cwd = repo root so the worker resolves its package + the libpostal binding.
-    # shellcheck disable=SC2086
-    ( cd "$REPO" && exec $WORKER_CMD --http --port 0 --port-file "$PORT_FILE" ) > "$LOG_FILE" 2>&1 &
-    SERVER_PID=$!
+    # Honor a pre-launched HTTP worker (e.g. a running container in the docker
+    # image_test): if VGI_LIBPOSTAL_WORKER already points at an http(s) URL, use
+    # it as-is and skip spawning a local worker. The httpfs injection above still
+    # runs because TRANSPORT=http.
+    if [[ "${VGI_LIBPOSTAL_WORKER:-}" =~ ^https?:// ]]; then
+      echo "Using pre-launched HTTP worker at $VGI_LIBPOSTAL_WORKER"
+    else
+      # Boot the worker in HTTP mode on an auto-selected port. The worker writes
+      # the chosen port to --port-file atomically (tmp + rename), so we watch for
+      # the file to appear rather than parsing stdout. HTTP mode needs the `http`
+      # extra (waitress); CI runs `uv sync --extra http` and the PEP 723 header
+      # lists `vgi-python[http]`.
+      PORT_FILE="$(mktemp -u "${TMPDIR:-/tmp}/libpostal-port.XXXXXX")"
+      LOG_FILE="${TMPDIR:-/tmp}/libpostal-http-server.log"
+      echo "Starting HTTP worker: $WORKER_CMD --http --port 0 --port-file $PORT_FILE"
+      # cwd = repo root so the worker resolves its package + the libpostal binding.
+      # shellcheck disable=SC2086
+      ( cd "$REPO" && exec $WORKER_CMD --http --port 0 --port-file "$PORT_FILE" ) > "$LOG_FILE" 2>&1 &
+      SERVER_PID=$!
 
-    PORT=""
-    for _ in $(seq 1 240); do
-      if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-        echo "ERROR: HTTP worker exited before reporting a port. Log:" >&2
+      PORT=""
+      for _ in $(seq 1 240); do
+        if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+          echo "ERROR: HTTP worker exited before reporting a port. Log:" >&2
+          cat "$LOG_FILE" >&2
+          exit 1
+        fi
+        if [[ -s "$PORT_FILE" ]]; then
+          PORT="$(tr -d '[:space:]' < "$PORT_FILE")"
+          [[ -n "$PORT" ]] && break
+        fi
+        sleep 0.5
+      done
+      if [[ -z "$PORT" ]]; then
+        echo "ERROR: timed out waiting for HTTP worker port-file. Log:" >&2
         cat "$LOG_FILE" >&2
         exit 1
       fi
-      if [[ -s "$PORT_FILE" ]]; then
-        PORT="$(tr -d '[:space:]' < "$PORT_FILE")"
-        [[ -n "$PORT" ]] && break
-      fi
-      sleep 0.5
-    done
-    if [[ -z "$PORT" ]]; then
-      echo "ERROR: timed out waiting for HTTP worker port-file. Log:" >&2
-      cat "$LOG_FILE" >&2
-      exit 1
+      echo "HTTP worker ready on port $PORT (pid $SERVER_PID)"
+      export VGI_LIBPOSTAL_WORKER="http://127.0.0.1:$PORT"
     fi
-    echo "HTTP worker ready on port $PORT (pid $SERVER_PID)"
-    export VGI_LIBPOSTAL_WORKER="http://127.0.0.1:$PORT"
     ;;
 
   unix)
@@ -190,12 +201,15 @@ EOF
 "$HAYBARN_UNITTEST" "test/_warm.test" >/dev/null 2>&1 || echo "::warning::extension warm step did not fully succeed"
 rm -f "$STAGE/test/_warm.test"
 
-# Run the whole suite in one invocation, capturing the runner's native
-# sqllogictest report so we can both stream it AND assert on the summary line.
-echo "Running suite (transport: $TRANSPORT, worker: $VGI_LIBPOSTAL_WORKER) ..."
+# Run the suite in one invocation, capturing the runner's native sqllogictest
+# report so we can both stream it AND assert on the summary line. All files are
+# always staged; TEST_PATTERN narrows what actually RUNS (default: all of them),
+# e.g. a single-file stdio smoke in the docker image_test.
+TEST_PATTERN="${TEST_PATTERN:-test/sql/*}"
+echo "Running suite (transport: $TRANSPORT, worker: $VGI_LIBPOSTAL_WORKER, pattern: $TEST_PATTERN) ..."
 RUN_LOG="$STAGE/run.log"
 set +e
-"$HAYBARN_UNITTEST" "test/sql/*" 2>&1 | tee "$RUN_LOG"
+"$HAYBARN_UNITTEST" "$TEST_PATTERN" 2>&1 | tee "$RUN_LOG"
 status=${PIPESTATUS[0]}
 set -e
 

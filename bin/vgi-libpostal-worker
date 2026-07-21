@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Copyright 2026 Query Farm LLC - https://query.farm
+#
+# Launch wrapper so DuckDB's vgi extension can spawn this Python worker via a
+# plain filesystem LOCATION:
+#   ATTACH 'postal' (TYPE vgi, LOCATION '/path/to/vgi-libpostal/bin/vgi-libpostal-worker');
+#
+# The worker speaks Arrow IPC over stdin/stdout (Worker.run()). We use
+# `uv run --no-sync` on purpose: the `postal` (pypostal) C extension is compiled
+# against the libpostal native lib in the project .venv, and a bare `uv run`
+# would recompile it in a fresh ephemeral env on EVERY ATTACH (see CLAUDE.md).
+# `--no-sync` reuses the already-built .venv; uv's diagnostics go to stderr, so
+# stdout stays a clean Arrow IPC stream.
+set -euo pipefail
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec uv run --no-sync --project "$REPO_ROOT" --quiet vgi-libpostal-worker "$@"
