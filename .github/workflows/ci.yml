@@ -42,6 +42,8 @@ jobs:
   lint:
     name: Lint (pure-Python, no libpostal)
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.13"
     steps:
       - uses: actions/checkout@v6
 
@@ -111,6 +113,7 @@ jobs:
       matrix:
         transport: [subprocess, http, unix]
     env:
+      UV_PYTHON: "3.13"
       LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
     defaults:
       run:
@@ -195,6 +198,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ vars.RUN_LIBPOSTAL == 'true' }}
     env:
+      UV_PYTHON: "3.13"
       LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
     defaults:
       run:
