@@ -29,7 +29,7 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "vgi-python>=0.30.0",
+    "vgi-python>=0.46.1",
     "postal>=1.1",
     "pyarrow",
 ]
@@ -40,20 +40,21 @@ dev = [
     "ruff>=0.5",
     "mypy>=1.10",
     "pydoclint>=0.5",
+    "pyarrow-stubs",
 ]
 # HTTP transport: the worker can serve over HTTP (`libpostal_worker.py --http`)
 # in addition to stdio/AF_UNIX. That path needs vgi-python's `http` extra
 # (waitress). The gated SQL-E2E http transport leg installs this via
 # `uv sync --extra http` (alongside the libpostal native build).
 http = [
-    "vgi-python[http]>=0.30.0",
+    "vgi-python[http]>=0.46.1",
 ]
 # HTTP-serving extra installed by the Docker image (`pip install '.[serve]'`).
 # Alias of `http`: the container serves the worker over HTTP via `vgi-serve`,
 # which needs vgi-python's `http` extra (waitress). Kept as a separate name so
 # the image install line matches the other Python workers (vgi-llm / vgi-sklearn).
 serve = [
-    "vgi-python[http]>=0.30.0",
+    "vgi-python[http]>=0.46.1",
 ]
 
 # Launch the worker without the repo-root shim once the wheel is installed:

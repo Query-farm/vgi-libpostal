@@ -31,7 +31,7 @@ are *table functions* and live in :mod:`vgi_libpostal.tables`.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Annotated
+from typing import Annotated, Any
 
 import pyarrow as pa
 from vgi.arguments import Param, Returns
@@ -58,12 +58,12 @@ def _map_str(arr: pa.StringArray, fn: Callable[[str], str | None]) -> pa.StringA
     return pa.array(out, type=pa.string())
 
 
-def _map_map(arr: pa.StringArray, fn: Callable[[str], list[tuple[str, str]]]) -> pa.MapArray:
+def _map_map(arr: pa.StringArray, fn: Callable[[str], list[tuple[str, str]]]) -> pa.Array[Any]:
     out = [None if x is None else fn(x) for x in arr.to_pylist()]
     return pa.array(out, type=_MAP_TYPE)
 
 
-def _map_list(arr: pa.StringArray, fn: Callable[[str], list[str]]) -> pa.ListArray:
+def _map_list(arr: pa.StringArray, fn: Callable[[str], list[str]]) -> pa.Array[Any]:
     out = [None if x is None else fn(x) for x in arr.to_pylist()]
     return pa.array(out, type=_LIST_TYPE)
 
@@ -171,7 +171,7 @@ class ParseAddressFunction(ScalarFunction):
     @classmethod
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to parse.")]
-    ) -> Annotated[pa.MapArray, Returns(arrow_type=_MAP_TYPE)]:
+    ) -> Annotated[pa.Array[Any], Returns(arrow_type=_MAP_TYPE)]:
         """Parse each row into a MAP of libpostal components (NULL passes through)."""
         return _map_map(text, addresses.parse_address_pairs)
 
@@ -272,7 +272,7 @@ class ExpandAddressFunction(ScalarFunction):
     @classmethod
     def compute(
         cls, text: Annotated[pa.StringArray, Param(doc="Address text to normalize.")]
-    ) -> Annotated[pa.ListArray, Returns(arrow_type=_LIST_TYPE)]:
+    ) -> Annotated[pa.Array[Any], Returns(arrow_type=_LIST_TYPE)]:
         """Normalize each row into a LIST of libpostal expansions (NULL passes through)."""
         return _map_list(text, addresses.expand_address)
 

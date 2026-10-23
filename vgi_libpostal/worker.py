@@ -216,9 +216,10 @@ _SCHEMA_CATEGORIES = json.dumps(
 )
 
 # VGI152/VGI920: a fixed analyst task suite so `vgi-lint simulate` can measure
-# how well an agent actually uses this worker. Each `reference_sql` is
-# deterministic for a given libpostal model; `ignore_column_names` lets the
-# analyst alias result columns freely (values/rows are what's graded).
+# how well an agent actually uses this worker. Each task is a public
+# {name, prompt} object. VGI416: the grader-only fields (`reference_sql`,
+# deterministic for a given libpostal model, and `ignore_column_names`) live in
+# the private `vgi-agent-tests.yaml` sidecar at the repo root, never in metadata.
 _AGENT_TEST_TASKS = json.dumps(
     [
         {
@@ -227,8 +228,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "What postal code does the address '781 Franklin Ave, Brooklyn, "
                 "NY 11216' contain? Return just the postcode as a single value."
             ),
-            "reference_sql": "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
-            "ignore_column_names": True,
         },
         {
             "name": "extract-house-number",
@@ -236,10 +235,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Extract the house (street) number from '1600 Pennsylvania Ave "
                 "NW, Washington, DC 20500'. Return it as a single value."
             ),
-            "reference_sql": (
-                "SELECT postal.main.address_house_number('1600 Pennsylvania Ave NW, Washington, DC 20500')"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "parse-city-from-map",
@@ -247,10 +242,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Parse '1600 Pennsylvania Ave NW, Washington, DC 20500' into its "
                 "address components and return the city."
             ),
-            "reference_sql": (
-                "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')['city']"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "components-road-long-format",
@@ -258,17 +249,10 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Using the long-format component parser, what value is labeled "
                 "'road' for '781 Franklin Ave, Brooklyn, NY 11216'?"
             ),
-            "reference_sql": (
-                "SELECT value FROM postal.main.parse_address_components("
-                "'781 Franklin Ave, Brooklyn, NY 11216') WHERE label = 'road'"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "count-component-labels",
             "prompt": ("How many distinct address component labels can this worker's discovery function report?"),
-            "reference_sql": "SELECT count(*) FROM postal.main.address_labels()",
-            "ignore_column_names": True,
         },
         {
             "name": "normalize-contains-expansion",
@@ -277,10 +261,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "St', is '120 east 96th street' one of the expansions it "
                 "produces? Return a single boolean."
             ),
-            "reference_sql": (
-                "SELECT list_contains(postal.main.expand_address('120 E 96th St'), '120 east 96th street')"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "extract-road",
@@ -288,8 +268,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "What is the road (street) of the address '781 Franklin Ave, "
                 "Brooklyn, NY 11216'? Return just the road as a single value."
             ),
-            "reference_sql": "SELECT postal.main.address_road('781 Franklin Ave, Brooklyn, NY 11216')",
-            "ignore_column_names": True,
         },
         {
             "name": "extract-state",
@@ -298,8 +276,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Brooklyn, NY 11216' contain? Return just the state as a single "
                 "value. Note this worker lower-cases its output."
             ),
-            "reference_sql": "SELECT postal.main.address_state('781 Franklin Ave, Brooklyn, NY 11216')",
-            "ignore_column_names": True,
         },
         {
             "name": "extract-city",
@@ -307,8 +283,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "What is the city of the address '1600 Pennsylvania Ave NW, "
                 "Washington, DC 20500'? Return just the city as a single value."
             ),
-            "reference_sql": ("SELECT postal.main.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500')"),
-            "ignore_column_names": True,
         },
         {
             "name": "extract-unit",
@@ -317,8 +291,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "E 96th St, New York, NY 10128'? Return just the unit as a single "
                 "value."
             ),
-            "reference_sql": ("SELECT postal.main.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128')"),
-            "ignore_column_names": True,
         },
         {
             "name": "extract-country",
@@ -327,8 +299,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "United Kingdom' contain? Return just the country as a single "
                 "value."
             ),
-            "reference_sql": ("SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom')"),
-            "ignore_column_names": True,
         },
     ]
 )
@@ -430,7 +400,7 @@ _POSTAL_CATALOG = Catalog(
     },
     schemas=[
         Schema(
-            name="main",
+            path=["main"],
             comment="libpostal address parsing, component extraction, and normalization functions",
             tags={
                 "vgi.title": "Address Parsing & Normalization",

@@ -1,0 +1,37 @@
+# Private graders for `vgi-lint simulate` (VGI416). The worker publishes only
+# task names and prompts in vgi.agent_test_tasks; the canonical solutions and
+# grading options stay in this repo-root sidecar, which vgi-lint auto-discovers.
+tasks:
+  - name: extract-postcode
+    reference_sql: "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')"
+    ignore_column_names: true
+  - name: extract-house-number
+    reference_sql: "SELECT postal.main.address_house_number('1600 Pennsylvania Ave NW, Washington, DC 20500')"
+    ignore_column_names: true
+  - name: parse-city-from-map
+    reference_sql: "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')['city']"
+    ignore_column_names: true
+  - name: components-road-long-format
+    reference_sql: "SELECT value FROM postal.main.parse_address_components('781 Franklin Ave, Brooklyn, NY 11216') WHERE label = 'road'"
+    ignore_column_names: true
+  - name: count-component-labels
+    reference_sql: "SELECT count(*) FROM postal.main.address_labels()"
+    ignore_column_names: true
+  - name: normalize-contains-expansion
+    reference_sql: "SELECT list_contains(postal.main.expand_address('120 E 96th St'), '120 east 96th street')"
+    ignore_column_names: true
+  - name: extract-road
+    reference_sql: "SELECT postal.main.address_road('781 Franklin Ave, Brooklyn, NY 11216')"
+    ignore_column_names: true
+  - name: extract-state
+    reference_sql: "SELECT postal.main.address_state('781 Franklin Ave, Brooklyn, NY 11216')"
+    ignore_column_names: true
+  - name: extract-city
+    reference_sql: "SELECT postal.main.address_city('1600 Pennsylvania Ave NW, Washington, DC 20500')"
+    ignore_column_names: true
+  - name: extract-unit
+    reference_sql: "SELECT postal.main.address_unit('Apt 5B, 120 E 96th St, New York, NY 10128')"
+    ignore_column_names: true
+  - name: extract-country
+    reference_sql: "SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom')"
+    ignore_column_names: true
