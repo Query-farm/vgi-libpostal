@@ -17,7 +17,7 @@
 #     exactly once (on the first parse) and every later query runs warm.
 #
 # This file is auto-discovered from the repo root by both the CI
-# `Query-farm/vgi-lint-check@v1` action and a local `vgi-lint` run.
+# `Query-farm/vgi-lint-check@v2` action and a local `vgi-lint` run.
 [execution]
 timeout = 120
 slow_seconds = 30

@@ -119,7 +119,7 @@ make test                      # both
 uv run --no-sync ruff check . && uv run --no-sync mypy vgi_libpostal/
 ```
 
-Install the runner once with `uv tool install haybarn-unittest`. **The SQL suite
+Install the runner once with `uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`. **The SQL suite
 is authoritative** — the in-process pytest path can pass while the real
 ATTACH+SELECT wire path is broken (that's how edges #1/#3 surface).
 

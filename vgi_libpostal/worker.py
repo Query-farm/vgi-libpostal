@@ -41,7 +41,7 @@ import json
 import threading
 
 from vgi import Worker
-from vgi.catalog import Catalog, Schema, Table
+from vgi.catalog import Catalog, Schema, Table, constraint_record
 
 from vgi_libpostal import addresses
 from vgi_libpostal.scalars import SCALAR_FUNCTIONS
@@ -339,8 +339,23 @@ _DISCOVERY_TABLES: list[Table] = [
         name="address_labels",
         function=AddressLabelsFunction,
         comment="Every component label libpostal can emit, one per row (discovery table).",
-        primary_key=(("label",),),
-        not_null=("label",),
+        # vgi.v3 canonical constraint records. Every row is a distinct non-null
+        # label, so both are ENFORCED + ALL_ROWS, the only form DuckDB accepts.
+        # The explicit NOT_NULL keeps a NOT NULL row in duckdb_constraints()
+        # (the PRIMARY KEY alone does not list one there, which vgi-lint flags
+        # as VGI804).
+        constraints=tuple(
+            constraint_record(
+                ["main"],
+                "address_labels",
+                constraint_id,
+                kind,
+                [["label"]],
+                enforcement="ENFORCED",
+                validation="ALL_ROWS",
+            )
+            for constraint_id, kind in (("pk", "PRIMARY_KEY"), ("label_not_null", "NOT_NULL"))
+        ),
         column_comments={
             "label": "A component label libpostal can emit, e.g. road, city, state, postcode, country.",
         },

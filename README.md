@@ -174,7 +174,7 @@ uv run --no-sync ruff check . && uv run --no-sync mypy vgi_libpostal/
 `make test-sql` sets `VGI_LIBPOSTAL_WORKER="uv run --no-sync
 libpostal_worker.py"`, puts `~/.local/bin` on `PATH`, and runs
 `haybarn-unittest` over `test/sql/*`. Install the runner once with
-`uv tool install haybarn-unittest`.
+`uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`.
 
 The SQL suite is the authoritative behaviour gate — the in-process pytest path
 can pass while the real ATTACH+SELECT wire path is broken. Run both.
