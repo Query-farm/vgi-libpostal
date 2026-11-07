@@ -17,7 +17,7 @@ international street-address parser/normalizer trained on
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'postal' (TYPE vgi, LOCATION 'uv run --no-sync libpostal_worker.py');
+ATTACH 'postal' (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.2.1');
 
 -- Parse an address into a MAP of components (values are lower-cased)
 SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500');
@@ -38,87 +38,58 @@ SELECT label FROM postal.address_labels() ORDER BY label;
 
 ---
 
-## ⚠️ Heavyweight native dependency — read this first
-
-**This worker does NOT work out of the box from `pip`/`uv` alone.** It depends
-on the **libpostal C library and its ~2 GB of machine-learning data models**,
-which must be installed **separately** and are **NOT bundled** with this package
-and **NOT pip-installable**. The `postal` Python package is only a thin C binding
-that *compiles against* libpostal — without the C library present, it will not
-even build.
-
-Think of this like [vgi-tika](https://github.com/Query-farm)'s Tesseract OCR
-dependency, but **much heavier**: libpostal ships ~2 GB of trained data
-(address-parser CRF model, transliteration tables, numeric-expression and
-language-classification data).
-
-### Install libpostal
-
-**macOS (Homebrew)** — the easy path; pulls the prebuilt library + data:
-
-```sh
-brew install libpostal
-# library at  $(brew --prefix libpostal)
-# data at     $(brew --prefix libpostal)/share/libpostal   (~1.9 GB)
-```
-
-**Linux / from source** — build the C library, then download the ~2 GB data
-(takes several minutes and ~2 GB of disk):
-
-```sh
-sudo apt-get install -y curl autoconf automake libtool pkg-config
-git clone https://github.com/openvenues/libpostal && cd libpostal
-./bootstrap.sh
-./configure --datadir=/path/to/libpostal-data   # this is where the ~2 GB lands
-make -j"$(nproc)" && sudo make install && sudo ldconfig
-```
-
-See the [libpostal install guide](https://github.com/openvenues/libpostal#installation)
-for Windows and other platforms.
-
-### Build the `postal` binding against it
-
-The `postal` C extension needs to find libpostal's headers and library at build
-time. Export the include/lib paths, then sync:
-
-```sh
-export CFLAGS="-I$(brew --prefix libpostal)/include"
-export LDFLAGS="-L$(brew --prefix libpostal)/lib"
-uv sync --extra dev      # compiles `postal` against libpostal
-```
-
-(On Linux, point `CFLAGS`/`LDFLAGS` at your `--prefix` and set
-`LD_LIBRARY_PATH` to its `lib/` directory.)
-
----
-
 ## Install & attach
 
-```sh
-git clone <this repo> && cd vgi-libpostal
-export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
-uv sync --extra dev
-```
-
-Attach the worker from any DuckDB-compatible engine. **Use `uv run --no-sync`**
-as the launch command:
+**Run it from the published Docker image — this is the supported way.** The
+worker needs the **libpostal C library and its ~2 GB of trained data models**,
+which are **not pip-installable**, so `uv`/`uvx` alone cannot install it. The
+image at `ghcr.io/query-farm/vgi-libpostal` (linux/amd64 + linux/arm64, cosign
+signed) bakes in libpostal, its data, and the worker, so the only host
+requirement is Docker (or Podman / nerdctl):
 
 ```sql
-ATTACH 'postal' (TYPE vgi, LOCATION 'uv run --no-sync libpostal_worker.py');
+INSTALL vgi FROM community; LOAD vgi;
+ATTACH 'postal' (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.2.1');
+SELECT postal.parse_address('10 Downing St, London SW1A 2AA, UK');
 ```
 
-### Why `--no-sync`?
+The `vgi` extension turns a `docker://` (or `oci://`) LOCATION into
+`docker run -i --rm <image> stdio`, pulls the image on first use, and keeps the
+container warm in its worker pool across queries. Pin a release tag (`:0.2.1`)
+for reproducibility; `:latest` tracks the newest release and `:edge` tracks
+`main`. The image is large (~2.8 GB uncompressed), so pull it ahead of time if
+you like: `docker pull ghcr.io/query-farm/vgi-libpostal:0.2.1`. libpostal loads
+its models on the first parse/expand query (a few seconds), not at ATTACH.
 
-`postal` is a C extension compiled against libpostal. A bare
-`uv run libpostal_worker.py` (using the PEP 723 inline dependencies) would
-**rebuild pypostal in a fresh ephemeral environment on every single launch** —
-slow, and it would need `CFLAGS`/`LDFLAGS` re-exported each time. `uv run
---no-sync` reuses the project's already-built `.venv` (where `postal` is already
-compiled), so the worker starts fast. Build the venv once with `uv sync`; launch
-with `--no-sync`.
+The same image also serves HTTP (`docker run -p 8000:8000
+ghcr.io/query-farm/vgi-libpostal:0.2.1`, then `ATTACH ... LOCATION
+'http://localhost:8000'`).
 
-The PEP 723 header in `libpostal_worker.py` still lists `postal` for
-documentation/portability, but the prebuilt-venv path is the supported one.
+### Without Docker (bring your own libpostal)
+
+If libpostal and its data are already installed on the host, the worker can run
+natively. The `postal` Python binding compiles against libpostal, so point the
+compiler at it for the first install:
+
+```sh
+# macOS: brew install libpostal   (library + ~1.9 GB data)
+# Linux: build from source -- https://github.com/openvenues/libpostal#installation
+export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
+uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker --help
+```
+
+uv caches the built environment, so afterwards the same command works as a
+LOCATION without the flags:
+
+```sql
+ATTACH 'postal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker');
+```
+
+(On Linux, also make sure the libpostal shared library is on the loader path,
+e.g. `sudo ldconfig` or `LD_LIBRARY_PATH`.) For development from a checkout,
+export the same `CFLAGS`/`LDFLAGS`, run `uv sync --extra dev` once, and attach
+with `LOCATION 'uv run --no-sync libpostal_worker.py'` — `--no-sync` reuses the
+prebuilt `.venv` instead of recompiling `postal` on every launch.
 
 ---
 
