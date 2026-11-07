@@ -38,7 +38,7 @@ SELECT label FROM postal.address_labels() ORDER BY label;
 
 ---
 
-## Install & attach
+## Quick start
 
 **Run it from the published Docker image — this is the supported way.** The
 worker needs the **libpostal C library and its ~2 GB of trained data models**,
@@ -48,10 +48,15 @@ signed) bakes in libpostal, its data, and the worker, so the only host
 requirement is Docker (or Podman / nerdctl):
 
 ```sql
-INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'postal' (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.2.1');
+INSTALL vgi FROM community;
+LOAD vgi;
+
+ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.2.1');
+
 SELECT postal.parse_address('10 Downing St, London SW1A 2AA, UK');
 ```
+
+Change `:0.2.1` to move to a newer release.
 
 The `vgi` extension turns a `docker://` (or `oci://`) LOCATION into
 `docker run -i --rm <image> stdio`, pulls the image on first use, and keeps the
@@ -61,35 +66,43 @@ for reproducibility; `:latest` tracks the newest release and `:edge` tracks
 you like: `docker pull ghcr.io/query-farm/vgi-libpostal:0.2.1`. libpostal loads
 its models on the first parse/expand query (a few seconds), not at ATTACH.
 
-The same image also serves HTTP (`docker run -p 8000:8000
-ghcr.io/query-farm/vgi-libpostal:0.2.1`, then `ATTACH ... LOCATION
-'http://localhost:8000'`).
+### Other ways to run it
 
-### Without Docker (bring your own libpostal)
+- **Over HTTP**: the same image also serves HTTP (`docker run -p 8000:8000
+  ghcr.io/query-farm/vgi-libpostal:0.2.1`, then `ATTACH ... LOCATION
+  'http://localhost:8000'`).
 
-If libpostal and its data are already installed on the host, the worker can run
-natively. The `postal` Python binding compiles against libpostal, so point the
-compiler at it for the first install:
+- **With `uvx`** (needs libpostal and its data installed on the host). The
+  `postal` Python binding compiles against libpostal, so point the compiler at
+  it for the first install:
 
-```sh
-# macOS: brew install libpostal   (library + ~1.9 GB data)
-# Linux: build from source -- https://github.com/openvenues/libpostal#installation
-export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
-uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker --help
-```
+  ```sh
+  # macOS: brew install libpostal   (library + ~1.9 GB data)
+  # Linux: build from source -- https://github.com/openvenues/libpostal#installation
+  export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
+  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker --help
+  ```
 
-uv caches the built environment, so afterwards the same command works as a
-LOCATION without the flags:
+  uv caches the built environment, so afterwards the same command works as a
+  LOCATION without the flags:
 
-```sql
-ATTACH 'postal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker');
-```
+  ```sql
+  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker');
+  ```
 
-(On Linux, also make sure the libpostal shared library is on the loader path,
-e.g. `sudo ldconfig` or `LD_LIBRARY_PATH`.) For development from a checkout,
-export the same `CFLAGS`/`LDFLAGS`, run `uv sync --extra dev` once, and attach
-with `LOCATION 'uv run --no-sync libpostal_worker.py'` — `--no-sync` reuses the
-prebuilt `.venv` instead of recompiling `postal` on every launch.
+  (On Linux, also make sure the libpostal shared library is on the loader path,
+  e.g. `sudo ldconfig` or `LD_LIBRARY_PATH`.)
+
+- **From a local checkout** (`git clone https://github.com/Query-farm/vgi-libpostal`),
+  export the same `CFLAGS`/`LDFLAGS`, run `uv sync --extra dev` once, and point
+  `LOCATION` at `uv run --project /path/to/vgi-libpostal --no-sync vgi-libpostal-worker` —
+  `--no-sync` reuses the prebuilt `.venv` instead of recompiling `postal` on
+  every launch.
+
+### Build from source
+
+To build and test the worker yourself, see
+[Development & testing](#development--testing).
 
 ---
 
