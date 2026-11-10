@@ -401,7 +401,8 @@ _POSTAL_CATALOG = Catalog(
     comment="Parse + normalize international postal addresses (libpostal) for SQL",
     source_url="https://github.com/Query-farm/vgi-libpostal",
     tags={
-        "vgi.title": "International Address Parsing (libpostal)",
+        "vgi.title": "libpostal",
+        "vgi.subtitle": "Parse and normalize international street addresses into house number, road, city, postcode and more.",
         "vgi.keywords": _CATALOG_KEYWORDS,
         "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
         "vgi.doc_md": _CATALOG_DESCRIPTION_MD,

@@ -28,7 +28,7 @@ WORKER_STDIO    ?= .venv/bin/python libpostal_worker.py
 
 # haybarn-unittest 2.0 is required (uv tool install --prerelease allow
 # 'haybarn-unittest>=2.0.0rc11,<2.1'): its community `vgi` extension is the one
-# that speaks the worker's VGI protocol (vgi.v3 / 3.1). --keep-home lets the runner
+# that speaks the worker's VGI protocol (vgi.v3 / 3.2). --keep-home lets the runner
 # see the extensions installed under the real $HOME (haybarn-unittest 2.0 isolates it).
 # haybarn-unittest lives in the uv tools bin; keep it on PATH.
 HAYBARN_BIN     ?= $(HOME)/.local/bin
