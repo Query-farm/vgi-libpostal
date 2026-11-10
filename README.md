@@ -17,7 +17,7 @@ international street-address parser/normalizer trained on
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'postal' (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.2.1');
+ATTACH 'postal' (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.3.0');
 
 -- Parse an address into a MAP of components (values are lower-cased)
 SELECT postal.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500');
@@ -51,25 +51,25 @@ requirement is Docker (or Podman / nerdctl):
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.2.1');
+ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-libpostal:0.3.0');
 
 SELECT postal.parse_address('10 Downing St, London SW1A 2AA, UK');
 ```
 
-Change `:0.2.1` to move to a newer release.
+Change `:0.3.0` to move to a newer release.
 
 The `vgi` extension turns a `docker://` (or `oci://`) LOCATION into
 `docker run -i --rm <image> stdio`, pulls the image on first use, and keeps the
-container warm in its worker pool across queries. Pin a release tag (`:0.2.1`)
+container warm in its worker pool across queries. Pin a release tag (`:0.3.0`)
 for reproducibility; `:latest` tracks the newest release and `:edge` tracks
 `main`. The image is large (~2.8 GB uncompressed), so pull it ahead of time if
-you like: `docker pull ghcr.io/query-farm/vgi-libpostal:0.2.1`. libpostal loads
+you like: `docker pull ghcr.io/query-farm/vgi-libpostal:0.3.0`. libpostal loads
 its models on the first parse/expand query (a few seconds), not at ATTACH.
 
 ### Other ways to run it
 
 - **Over HTTP**: the same image also serves HTTP (`docker run -p 8000:8000
-  ghcr.io/query-farm/vgi-libpostal:0.2.1`, then `ATTACH ... LOCATION
+  ghcr.io/query-farm/vgi-libpostal:0.3.0`, then `ATTACH ... LOCATION
   'http://localhost:8000'`).
 
 - **With `uvx`** (needs libpostal and its data installed on the host). The
@@ -80,14 +80,14 @@ its models on the first parse/expand query (a few seconds), not at ATTACH.
   # macOS: brew install libpostal   (library + ~1.9 GB data)
   # Linux: build from source -- https://github.com/openvenues/libpostal#installation
   export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
-  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker --help
+  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.3.0 vgi-libpostal-worker --help
   ```
 
   uv caches the built environment, so afterwards the same command works as a
   LOCATION without the flags:
 
   ```sql
-  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.2.1 vgi-libpostal-worker');
+  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.3.0 vgi-libpostal-worker');
   ```
 
   (On Linux, also make sure the libpostal shared library is on the loader path,
