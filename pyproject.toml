@@ -1,6 +1,6 @@
 [project]
 name = "vgi-libpostal"
-version = "0.2.1"
+version = "0.3.0"
 description = "International address parsing + normalization (libpostal) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
