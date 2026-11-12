@@ -22,4 +22,4 @@ bundled. See the README for the full install story.
 
 from __future__ import annotations
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
