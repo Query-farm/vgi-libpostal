@@ -218,3 +218,6 @@ Written by [Query.Farm](https://query.farm).
 
 Copyright 2026 Query Farm LLC - https://query.farm
 
+## Notebooks
+
+[Executed address-candidate review walkthrough](notebooks/README.md).
