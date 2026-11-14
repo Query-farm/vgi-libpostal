@@ -35,3 +35,24 @@ tasks:
   - name: extract-country
     reference_sql: "SELECT postal.main.address_country('10 Downing St, London SW1A 2AA, United Kingdom')"
     ignore_column_names: true
+  # Composed tasks: each needs two of the worker's objects (address
+  # normalization across rows; the label vocabulary vs. parsed components).
+  # Offline + deterministic for a given libpostal model, so exact-compare works.
+  # Expected answers: 2 (the 350 5th Ave and 1600 Pennsylvania pairs; 1650 shares
+  # only the postcode) and 14 (20 labels minus the 6 the three parses use).
+  - name: dedupe-count-matching-pairs
+    reference_sql: >-
+      WITH a(id, addr) AS (VALUES
+      (1, '350 5th Ave, New York, NY 10118'), (2, '350 Fifth Avenue, New York NY 10118'),
+      (3, '1600 Pennsylvania Ave NW, Washington, DC 20500'), (4, '1600 Pennsylvania Avenue Northwest, Washington DC 20500'),
+      (5, '1650 Pennsylvania Ave NW, Washington, DC 20500'), (6, '10 Downing St, London SW1A 2AA')),
+      k AS (SELECT id, postal.main.expand_address(addr) AS forms FROM a)
+      SELECT count(*) FROM k AS x JOIN k AS y ON x.id < y.id AND list_has_any(x.forms, y.forms)
+    ignore_column_names: true
+  - name: count-labels-absent-from-batch
+    reference_sql: >-
+      SELECT count(*) FROM postal.main.address_labels
+      WHERE label NOT IN (SELECT unnest(map_keys(postal.main.parse_address(addr))) FROM (VALUES
+      ('1600 Pennsylvania Ave NW, Washington, DC 20500'), ('350 Fifth Avenue, New York NY 10118'),
+      ('Apt 5B, 120 E 96th St, New York, NY 10128')) AS t(addr))
+    ignore_column_names: true

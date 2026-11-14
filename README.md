@@ -34,6 +34,20 @@ SELECT * FROM postal.parse_address_components('781 Franklin Ave, Brooklyn, NY 11
 
 -- Discover the component labels libpostal can emit
 SELECT label FROM postal.address_labels() ORDER BY label;
+
+-- Compose them: find duplicate addresses -- same postcode AND overlapping
+-- normalized expansions ('St' = 'Street', 'E' = 'East')
+WITH customers(id, addr) AS (VALUES
+    (1, '120 E 96th St, New York, NY 10128'),
+    (2, '120 East 96th Street, New York NY 10128'),
+    (3, '130 E 96th St, New York, NY 10128')),
+keyed AS (SELECT id, postal.address_postcode(addr) AS postcode,
+                 postal.expand_address(addr) AS forms FROM customers)
+SELECT a.id AS id_a, b.id AS id_b
+FROM keyed AS a JOIN keyed AS b
+  ON a.postcode = b.postcode AND a.id < b.id AND list_has_any(a.forms, b.forms)
+ORDER BY id_a, id_b;
+-- (1, 2): 130 E 96th St shares the postcode but is a different building
 ```
 
 ---
@@ -155,8 +169,8 @@ make test                           # both
 uv run --no-sync ruff check . && uv run --no-sync mypy vgi_libpostal/
 ```
 
-`make test-sql` sets `VGI_LIBPOSTAL_WORKER="uv run --no-sync
-libpostal_worker.py"`, puts `~/.local/bin` on `PATH`, and runs
+`make test-sql` sets `VGI_LIBPOSTAL_WORKER=".venv/bin/python
+libpostal_worker.py"` (the prebuilt venv, like `uv run --no-sync`), puts `~/.local/bin` on `PATH`, and runs
 `haybarn-unittest` over `test/sql/*`. Install the runner once with
 `uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`.
 

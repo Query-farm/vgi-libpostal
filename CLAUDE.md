@@ -66,8 +66,8 @@ The fix: launch from the already-built project `.venv` with **`uv run
 So:
 
 - The worker command for `ATTACH` is `uv run --no-sync libpostal_worker.py`.
-- `Makefile`'s `test-sql` sets `VGI_LIBPOSTAL_WORKER="uv run --no-sync
-  libpostal_worker.py"`.
+- `Makefile`'s `test-sql` sets `VGI_LIBPOSTAL_WORKER=".venv/bin/python
+  libpostal_worker.py"` -- the same prebuilt venv, minus uv's startup.
 - The PEP 723 header in `libpostal_worker.py` still lists `postal` for
   documentation/portability, but the tested path is the prebuilt venv.
 

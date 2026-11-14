@@ -84,3 +84,71 @@ def object_tags(
         # VGI515: described examples ({"description","sql"}), JSON-serialized.
         tags["vgi.example_queries"] = json.dumps(example_queries)
     return tags
+
+
+# ---------------------------------------------------------------------------
+# Composed example queries
+#
+# Each combines two or more of this worker's own objects in one realistic query.
+# They are defined ONCE here and referenced from the schema-level example list
+# (worker.py), the example list of the object that drives each query (so the
+# vgi-lint agent simulator, which only shows per-object examples, sees them), and
+# -- being offline and deterministic for a given libpostal model -- the
+# guaranteed-runnable ``vgi.executable_examples`` list. test/sql/composed.test
+# pins their output.
+# ---------------------------------------------------------------------------
+
+#: expand_address + address_postcode: record-linkage duplicate detection.
+COMPOSED_DEDUP_EXAMPLE: dict[str, str] = {
+    "description": (
+        "Find duplicate customer addresses: block candidate pairs on the extracted "
+        "postcode, then match when their libpostal normalized expansions overlap "
+        "(pairs 1-2 and 3-4 match; 120 vs 130 E 96th St does not)."
+    ),
+    "sql": (
+        "WITH customers(id, addr) AS (VALUES "
+        "(1, '120 E 96th St, New York, NY 10128'), "
+        "(2, '120 East 96th Street, New York NY 10128'), "
+        "(3, '781 Franklin Ave, Brooklyn, NY 11216'), "
+        "(4, '781 Franklin Avenue, Brooklyn NY 11216'), "
+        "(5, '130 E 96th St, New York, NY 10128')), "
+        "keyed AS (SELECT id, addr, postal.main.address_postcode(addr) AS postcode, "
+        "postal.main.expand_address(addr) AS forms FROM customers) "
+        "SELECT a.id AS id_a, b.id AS id_b, a.postcode "
+        "FROM keyed AS a JOIN keyed AS b "
+        "ON a.postcode = b.postcode AND a.id < b.id AND list_has_any(a.forms, b.forms) "
+        "ORDER BY id_a, id_b"
+    ),
+}
+
+#: parse_address_components feeding expand_address: normalize each component.
+COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE: dict[str, str] = {
+    "description": (
+        "Parse an address into long-format components and normalize each value with "
+        "expand_address (e.g. road 'pennsylvania ave nw' -> 'pennsylvania avenue "
+        "northwest', state 'dc' -> 'district of columbia')."
+    ),
+    "sql": (
+        "SELECT label, value, postal.main.expand_address(value) AS normalized "
+        "FROM postal.main.parse_address_components("
+        "'1600 Pennsylvania Ave NW, Washington, DC 20500') ORDER BY label"
+    ),
+}
+
+#: address_labels LEFT JOIN parse_address keys: per-label fill rate of a batch.
+COMPOSED_LABEL_COVERAGE_EXAMPLE: dict[str, str] = {
+    "description": (
+        "Profile a batch of addresses: for every label libpostal can emit, count how "
+        "many addresses it was parsed out of (0 for labels none of them contain)."
+    ),
+    "sql": (
+        "WITH addrs(addr) AS (VALUES "
+        "('781 Franklin Ave, Brooklyn, NY 11216'), "
+        "('Apt 5B, 120 E 96th St, New York, NY 10128'), "
+        "('10 Downing St, London SW1A 2AA, United Kingdom')), "
+        "found AS (SELECT DISTINCT addr, unnest(map_keys(postal.main.parse_address(addr))) AS label FROM addrs) "
+        "SELECT l.label, count(f.addr) AS addresses_with_label "
+        "FROM postal.main.address_labels AS l LEFT JOIN found AS f USING (label) "
+        "GROUP BY l.label ORDER BY addresses_with_label DESC, l.label"
+    ),
+}

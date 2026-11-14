@@ -44,6 +44,11 @@ from vgi import Worker
 from vgi.catalog import Catalog, Schema, Table, constraint_record
 
 from vgi_libpostal import addresses
+from vgi_libpostal.meta import (
+    COMPOSED_DEDUP_EXAMPLE,
+    COMPOSED_LABEL_COVERAGE_EXAMPLE,
+    COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE,
+)
 from vgi_libpostal.scalars import SCALAR_FUNCTIONS
 from vgi_libpostal.tables import TABLE_FUNCTIONS, AddressLabelsFunction
 
@@ -138,6 +143,10 @@ _SCHEMA_EXAMPLE_QUERIES = json.dumps(
             "description": "List the vocabulary of component labels libpostal can emit.",
             "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label",
         },
+        # Composed examples: two or more of the worker's objects in one query.
+        COMPOSED_DEDUP_EXAMPLE,
+        COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE,
+        COMPOSED_LABEL_COVERAGE_EXAMPLE,
     ]
 )
 
@@ -300,6 +309,29 @@ _AGENT_TEST_TASKS = json.dumps(
                 "value."
             ),
         },
+        {
+            "name": "dedupe-count-matching-pairs",
+            "prompt": (
+                "Using libpostal's address normalization, find duplicates in this "
+                "list of addresses -- two addresses refer to the same place when "
+                "their normalized expansions overlap: '350 5th Ave, New York, NY "
+                "10118'; '350 Fifth Avenue, New York NY 10118'; '1600 Pennsylvania "
+                "Ave NW, Washington, DC 20500'; '1600 Pennsylvania Avenue "
+                "Northwest, Washington DC 20500'; '1650 Pennsylvania Ave NW, "
+                "Washington, DC 20500'; '10 Downing St, London SW1A 2AA'. How many "
+                "unordered pairs of duplicates are there? Return a single integer."
+            ),
+        },
+        {
+            "name": "count-labels-absent-from-batch",
+            "prompt": (
+                "Parse these three addresses: '1600 Pennsylvania Ave NW, "
+                "Washington, DC 20500', '350 Fifth Avenue, New York NY 10118', and "
+                "'Apt 5B, 120 E 96th St, New York, NY 10128'. How many of the "
+                "component labels libpostal can emit appear in none of their "
+                "parses? Return a single integer."
+            ),
+        },
     ]
 )
 
@@ -389,6 +421,7 @@ _DISCOVERY_TABLES: list[Table] = [
                         "description": "Count how many component labels libpostal recognizes.",
                         "sql": "SELECT count(*) AS label_count FROM postal.main.address_labels",
                     },
+                    COMPOSED_LABEL_COVERAGE_EXAMPLE,
                 ]
             ),
         },

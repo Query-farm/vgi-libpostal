@@ -39,7 +39,7 @@ from vgi.metadata import FunctionExample
 from vgi.scalar_function import ScalarFunction
 
 from . import addresses
-from .meta import object_tags
+from .meta import COMPOSED_DEDUP_EXAMPLE, object_tags
 
 _SCALARS_SRC = "vgi_libpostal/scalars.py"
 
@@ -256,6 +256,7 @@ class ExpandAddressFunction(ScalarFunction):
                     "description": "One normalized expansion per row.",
                     "sql": "SELECT UNNEST(postal.main.expand_address('120 E 96th St'))",
                 },
+                COMPOSED_DEDUP_EXAMPLE,
             ],
         )
         examples = [
@@ -266,6 +267,10 @@ class ExpandAddressFunction(ScalarFunction):
             FunctionExample(
                 sql="SELECT UNNEST(postal.main.expand_address('120 E 96th St'))",
                 description="One expansion per row",
+            ),
+            FunctionExample(
+                sql=COMPOSED_DEDUP_EXAMPLE["sql"],
+                description=COMPOSED_DEDUP_EXAMPLE["description"],
             ),
         ]
 

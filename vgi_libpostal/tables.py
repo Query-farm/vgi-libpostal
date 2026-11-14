@@ -35,7 +35,12 @@ from vgi.table_function import (
 from vgi_rpc.rpc import OutputCollector
 
 from . import addresses
-from .meta import object_tags
+from .meta import (
+    COMPOSED_DEDUP_EXAMPLE,
+    COMPOSED_LABEL_COVERAGE_EXAMPLE,
+    COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE,
+    object_tags,
+)
 from .schema_utils import field
 
 _TABLES_SRC = "vgi_libpostal/tables.py"
@@ -45,25 +50,40 @@ _TABLES_SRC = "vgi_libpostal/tables.py"
 # `expected_result` deliberately -- the linter only needs each query to execute
 # cleanly, and libpostal output is statistical/lower-cased, so pinning exact
 # values would be brittle.
-_EXECUTABLE_EXAMPLES = (
-    "["
-    '{"description": "Parse a US address into a component MAP.",'
-    ' "sql": "SELECT postal.main.parse_address('
-    "'1600 Pennsylvania Ave NW, Washington, DC 20500')\"},"
-    '{"description": "Pull one component out of the parsed map.",'
-    ' "sql": "SELECT postal.main.parse_address('
-    "'10 Downing St, London SW1A 2AA, UK')['postcode']\"},"
-    '{"description": "Normalize/expand an abbreviated address for matching.",'
-    ' "sql": "SELECT postal.main.expand_address(\'120 E 96th St\')"},'
-    '{"description": "Extract just the postcode from an address.",'
-    ' "sql": "SELECT postal.main.address_postcode('
-    "'781 Franklin Ave, Brooklyn, NY 11216')\"},"
-    '{"description": "Long-format parse: one (label, value) row per component.",'
-    ' "sql": "SELECT * FROM postal.main.parse_address_components('
-    "'781 Franklin Ave, Brooklyn, NY 11216')\"},"
-    '{"description": "List the component labels libpostal can emit.",'
-    ' "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label"}'
-    "]"
+_EXECUTABLE_EXAMPLES = json.dumps(
+    [
+        {
+            "description": "Parse a US address into a component MAP.",
+            "sql": "SELECT postal.main.parse_address('1600 Pennsylvania Ave NW, Washington, DC 20500')",
+        },
+        {
+            "description": "Pull one component out of the parsed map.",
+            "sql": "SELECT postal.main.parse_address('10 Downing St, London SW1A 2AA, UK')['postcode']",
+        },
+        {
+            "description": "Normalize/expand an abbreviated address for matching.",
+            "sql": "SELECT postal.main.expand_address('120 E 96th St')",
+        },
+        {
+            "description": "Extract just the postcode from an address.",
+            "sql": "SELECT postal.main.address_postcode('781 Franklin Ave, Brooklyn, NY 11216')",
+        },
+        {
+            "description": "Long-format parse: one (label, value) row per component.",
+            "sql": (
+                "SELECT label, value FROM postal.main.parse_address_components("
+                "'781 Franklin Ave, Brooklyn, NY 11216') ORDER BY label"
+            ),
+        },
+        {
+            "description": "List the component labels libpostal can emit.",
+            "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label",
+        },
+        # Composed examples (offline + deterministic for a given libpostal model).
+        COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE,
+        COMPOSED_DEDUP_EXAMPLE,
+        COMPOSED_LABEL_COVERAGE_EXAMPLE,
+    ]
 )
 
 
@@ -167,6 +187,7 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
                             "'1600 Pennsylvania Ave NW, Washington, DC 20500') WHERE label = 'city'"
                         ),
                     },
+                    COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE,
                 ],
             ),
             # VGI307/VGI321: structured result schema (replaces retired result_columns_md).
@@ -202,6 +223,10 @@ class ParseAddressComponentsFunction(TableFunctionGenerator[_ParseComponentsArgs
                     "'1600 Pennsylvania Ave NW, Washington, DC 20500') WHERE label = 'city'"
                 ),
                 description="Pull one component out by label",
+            ),
+            FunctionExample(
+                sql=COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE["sql"],
+                description=COMPOSED_NORMALIZE_COMPONENTS_EXAMPLE["description"],
             ),
         ]
 
@@ -308,6 +333,7 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
                         "description": "List the component labels in alphabetical order.",
                         "sql": "SELECT label FROM postal.main.address_labels() ORDER BY label",
                     },
+                    COMPOSED_LABEL_COVERAGE_EXAMPLE,
                 ],
             ),
             # VGI307/VGI321: structured result schema (replaces retired result_columns_md).
@@ -332,6 +358,10 @@ class AddressLabelsFunction(TableFunctionGenerator[_NoArgs]):
             FunctionExample(
                 sql="SELECT label FROM postal.main.address_labels() ORDER BY label",
                 description="List the component labels",
+            ),
+            FunctionExample(
+                sql=COMPOSED_LABEL_COVERAGE_EXAMPLE["sql"],
+                description=COMPOSED_LABEL_COVERAGE_EXAMPLE["description"],
             ),
         ]
 
