@@ -9,12 +9,11 @@
 # The image bakes the libpostal C library + its ~2 GB data models (built from
 # source at image-build time), so it is large but fully self-contained.
 #
-# Tag-driven: vX.Y.Z -> :X.Y.Z / :X.Y / :latest; push to main -> :edge.
+# Tag-driven: vX.Y.Z -> :X.Y.Z / :X.Y / :latest; release tags only (:edge is no longer published).
 name: Publish image to ghcr.io
 
 on:
   push:
-    branches: [main]
     tags: ['v*.*.*']
   workflow_dispatch:
 

@@ -75,9 +75,9 @@ Change `:0.4.0` to move to a newer release.
 The `vgi` extension turns a `docker://` (or `oci://`) LOCATION into
 `docker run -i --rm <image> stdio`, pulls the image on first use, and keeps the
 container warm in its worker pool across queries. Pin a release tag (`:0.4.0`)
-for reproducibility; `:latest` tracks the newest release and `:edge` tracks
-`main`. The image is large (~2.8 GB uncompressed), so pull it ahead of time if
-you like: `docker pull ghcr.io/query-farm/vgi-libpostal:0.4.0`. libpostal loads
+for reproducibility; `:latest` tracks the newest release. The image is large
+(~2.8 GB uncompressed), so pull it ahead of time if you like:
+`docker pull ghcr.io/query-farm/vgi-libpostal:0.4.0`. libpostal loads
 its models on the first parse/expand query (a few seconds), not at ATTACH.
 
 ### Other ways to run it
