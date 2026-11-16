@@ -43,15 +43,15 @@ jobs:
     name: Lint (pure-Python, no libpostal)
     runs-on: ubuntu-latest
     env:
-      UV_PYTHON: "3.13"
+      UV_PYTHON: "3.14"
     steps:
       - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
 
-      - name: Set up Python 3.13
-        run: uv python install 3.13
+      - name: Set up Python 3.14
+        run: uv python install 3.14
 
       # Strict mypy + pydoclint need the worker's own imports (vgi, pyarrow)
       # resolvable, so install the project + dev tools from the lockfile. `postal`
@@ -121,7 +121,7 @@ jobs:
       matrix:
         transport: [subprocess, http, unix]
     env:
-      UV_PYTHON: "3.13"
+      UV_PYTHON: "3.14"
       LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
     defaults:
       run:
@@ -132,8 +132,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
 
-      - name: Set up Python 3.13
-        run: uv python install 3.13
+      - name: Set up Python 3.14
+        run: uv python install 3.14
 
       # ~~~ Build libpostal from source (several minutes) ~~~
       - name: Install libpostal build deps
@@ -206,7 +206,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ vars.RUN_LIBPOSTAL == 'true' }}
     env:
-      UV_PYTHON: "3.13"
+      UV_PYTHON: "3.14"
       LIBPOSTAL_PREFIX: ${{ github.workspace }}/.libpostal
     defaults:
       run:
@@ -217,8 +217,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
 
-      - name: Set up Python 3.13
-        run: uv python install 3.13
+      - name: Set up Python 3.14
+        run: uv python install 3.14
 
       # ~~~ Build libpostal from source (several minutes) ~~~
       - name: Install libpostal build deps

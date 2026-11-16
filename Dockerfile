@@ -12,7 +12,7 @@
 # pypostal against it. The result is a large (~2.5 GB) but fully self-contained
 # image: no model download at first query, no native deps to provision on-host.
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
