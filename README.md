@@ -94,14 +94,14 @@ its models on the first parse/expand query (a few seconds), not at ATTACH.
   # macOS: brew install libpostal   (library + ~1.9 GB data)
   # Linux: build from source -- https://github.com/openvenues/libpostal#installation
   export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
-  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.4.1 vgi-libpostal-worker --help
+  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.4.2 vgi-libpostal-worker --help
   ```
 
   uv caches the built environment, so afterwards the same command works as a
   LOCATION without the flags:
 
   ```sql
-  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.4.1 vgi-libpostal-worker');
+  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.4.2 vgi-libpostal-worker');
   ```
 
   (On Linux, also make sure the libpostal shared library is on the loader path,
