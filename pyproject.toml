@@ -1,6 +1,6 @@
 [project]
 name = "vgi-libpostal"
-version = "0.4.2"
+version = "0.5.0"
 description = "International address parsing + normalization (libpostal) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
@@ -29,7 +29,7 @@ classifiers = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "vgi-python>=0.52.2,<0.53",
+    "vgi-python>=0.55.2,<0.56",
     "postal>=1.1",
     "pyarrow",
 ]
@@ -47,14 +47,14 @@ dev = [
 # (waitress). The gated SQL-E2E http transport leg installs this via
 # `uv sync --extra http` (alongside the libpostal native build).
 http = [
-    "vgi-python[http]>=0.52.2,<0.53",
+    "vgi-python[http]>=0.55.2,<0.56",
 ]
 # HTTP-serving extra installed by the Docker image (`pip install '.[serve]'`).
 # Alias of `http`: the container serves the worker over HTTP via `vgi-serve`,
 # which needs vgi-python's `http` extra (waitress). Kept as a separate name so
 # the image install line matches the other Python workers (vgi-llm / vgi-sklearn).
 serve = [
-    "vgi-python[http]>=0.52.2,<0.53",
+    "vgi-python[http,oauth]>=0.55.2,<0.56",
 ]
 
 # Launch the worker without the repo-root shim once the wheel is installed:
