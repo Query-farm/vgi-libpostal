@@ -90,18 +90,20 @@ its models on the first parse/expand query (a few seconds), not at ATTACH.
   `postal` Python binding compiles against libpostal, so point the compiler at
   it for the first install:
 
+vgi-libpostal 0.5.0 speaks VGI protocol 3.4, so it needs Haybarn 2.0.1 or newer (Haybarn 2.0.0 loads a 3.3 `vgi` extension that cannot attach it).
+
   ```sh
   # macOS: brew install libpostal   (library + ~1.9 GB data)
   # Linux: build from source -- https://github.com/openvenues/libpostal#installation
   export CFLAGS="-I$(brew --prefix libpostal)/include" LDFLAGS="-L$(brew --prefix libpostal)/lib"
-  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.4.2 vgi-libpostal-worker --help
+  uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.5.0 vgi-libpostal-worker --help
   ```
 
   uv caches the built environment, so afterwards the same command works as a
   LOCATION without the flags:
 
   ```sql
-  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.4.2 vgi-libpostal-worker');
+  ATTACH 'postal' AS postal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-libpostal@v0.5.0 vgi-libpostal-worker');
   ```
 
   (On Linux, also make sure the libpostal shared library is on the loader path,
@@ -172,7 +174,7 @@ uv run --no-sync ruff check . && uv run --no-sync mypy vgi_libpostal/
 `make test-sql` sets `VGI_LIBPOSTAL_WORKER=".venv/bin/python
 libpostal_worker.py"` (the prebuilt venv, like `uv run --no-sync`), puts `~/.local/bin` on `PATH`, and runs
 `haybarn-unittest` over `test/sql/*`. Install the runner once with
-`uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`.
+`uv tool install --prerelease allow 'haybarn-unittest>=2.0.1rc3,<2.1'`.
 
 The SQL suite is the authoritative behaviour gate — the in-process pytest path
 can pass while the real ATTACH+SELECT wire path is broken. Run both.
